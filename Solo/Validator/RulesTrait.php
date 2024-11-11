@@ -60,4 +60,12 @@ trait RulesTrait
         }
         return $this;
     }
+
+    public function email(): self
+    {
+        if (!filter_var($this->value, FILTER_VALIDATE_EMAIL)) {
+            $this->addError(__FUNCTION__);
+        }
+        return $this;
+    }
 }
