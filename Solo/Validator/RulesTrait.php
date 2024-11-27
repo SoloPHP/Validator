@@ -68,4 +68,12 @@ trait RulesTrait
         }
         return $this;
     }
+
+    public function positive(): self
+    {
+        if (!is_numeric($this->value) || $this->value < 1) {
+            $this->addError(__FUNCTION__);
+        }
+        return $this;
+    }
 }
