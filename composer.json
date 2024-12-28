@@ -2,7 +2,7 @@
   "name": "solophp/validator",
   "type": "library",
   "description": "PHP Data Validator",
-  "keywords": ["validator","data","form","php"],
+  "keywords": ["validator", "data", "form", "php", "validation", "forms"],
   "license": "MIT",
   "authors": [
     {
