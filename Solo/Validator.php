@@ -2,22 +2,24 @@
 
 namespace Solo;
 
-use Solo\Validator\MessagesTrait;
+use Solo\Validator\Interfaces\RulesInterface;
+use Solo\Validator\Interfaces\ValidatorInterface;
+use Solo\Validator\ValidationMessages;
 use Solo\Validator\RulesTrait;
 
-class Validator
+class Validator implements ValidatorInterface, RulesInterface
 {
-    use MessagesTrait;
     use RulesTrait;
 
     private array $errors = [];
     private array $fields;
     private string $field;
     private $value = '';
+    private ValidationMessages $messages;
 
     public function __construct(array $customMessages = [])
     {
-        $this->messages = $customMessages ?? $this->messages;
+        $this->messages = new ValidationMessages($customMessages);
     }
 
     public function collect(array $fields): void
@@ -39,15 +41,21 @@ class Validator
         return $this;
     }
 
-    private function addError(string $type, array $placeholders = []): void
+    private function addError(string $type, ?string $message = null, array $placeholders = []): void
     {
         if (isset($this->errors[$this->field])) {
             return;
         }
 
-        if (isset($this->messages[$type])) {
+        if ($message !== null) {
+            $this->errors[$this->field] = $message;
+        } elseif ($defaultMessage = $this->messages->getMessage($type)) {
             $placeholders['{field}'] = $this->field;
-            $this->errors[$this->field] = str_replace(array_keys($placeholders), array_values($placeholders), $this->messages[$type]);
+            $this->errors[$this->field] = str_replace(
+                array_keys($placeholders),
+                array_values($placeholders),
+                $defaultMessage
+            );
         } else {
             $this->errors[$this->field] = sprintf('Some error in field: %s', $this->field);
         }
