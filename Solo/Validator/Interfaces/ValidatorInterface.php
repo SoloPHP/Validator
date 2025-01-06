@@ -5,32 +5,25 @@ namespace Solo\Validator\Interfaces;
 interface ValidatorInterface
 {
    /**
-    * Sets data for validation
-    *
-    * @param array $fields Associative array of field-value pairs to validate
-    * @return void
-    */
-    public function collect(array $fields): void;
-
-   /**
     * Starts validation chain for specific field
     *
-    * @param string $field Name of the field to validate
-    * @return $this
+    * @param string $field Field name to validate
+    * @param mixed $value Field value to validate
+    * @return self New validator instance
     */
-    public function validate(string $field): self;
+    public function validate(string $field, mixed $value): self;
 
    /**
     * Returns validation errors
     *
-    * @return array Associative array where key is field name and value is error message
+    * @return array Field name => error message pairs
     */
     public function getErrors(): array;
 
    /**
     * Checks if validation has failed
     *
-    * @return bool True if there are any validation errors, false otherwise
+    * @return bool True if errors exist
     */
     public function failed(): bool;
 }
