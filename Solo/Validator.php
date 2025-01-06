@@ -23,10 +23,9 @@ class Validator implements ValidatorInterface, RulesInterface
 
     public function validate(string $field, $value): self
     {
-        $validator = clone $this;
-        $validator->field = $field;
-        $validator->value = is_null($value) ? '' : $value;
-        return $validator;
+        $this->field = $field;
+        $this->value = is_null($value) ? '' : $value;
+        return $this;
     }
 
     private function addError(string $type, ?string $message = null, array $placeholders = []): void

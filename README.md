@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/solophp/validator)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-Simple and flexible validation library for PHP 8.1+ with immutable validation chains.
+Simple and flexible validation library for PHP 8.1+ with chainable rules.
 
 ## Requirements
 
