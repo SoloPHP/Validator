@@ -12,7 +12,6 @@ class Validator implements ValidatorInterface, RulesInterface
     use RulesTrait;
 
     private array $errors = [];
-    private array $fields;
     private string $field;
     private $value = '';
     private ValidationMessages $messages;
@@ -22,23 +21,12 @@ class Validator implements ValidatorInterface, RulesInterface
         $this->messages = new ValidationMessages($customMessages);
     }
 
-    public function collect(array $fields): void
+    public function validate(string $field, $value): self
     {
-        $this->fields = $fields;
-    }
-
-    public function validate(string $field): self
-    {
-        $this->field = $field;
-
-        if (array_key_exists($field, $this->fields)) {
-            $this->value = is_null($this->fields[$field]) ? '' : $this->fields[$field];
-        } else {
-            $this->value = '';
-            $this->addError('field');
-        }
-
-        return $this;
+        $validator = clone $this;
+        $validator->field = $field;
+        $validator->value = is_null($value) ? '' : $value;
+        return $validator;
     }
 
     private function addError(string $type, ?string $message = null, array $placeholders = []): void

@@ -1,8 +1,9 @@
-да, вы правы. Давайте исправлю имя в ридми:
-
 # PHP Validator
 
-A simple and flexible validation library for PHP 8.1 or higher with chainable rules.
+[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/solophp/validator)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
+
+Simple and flexible validation library for PHP 8.1+ with immutable validation chains.
 
 ## Requirements
 
@@ -15,73 +16,57 @@ A simple and flexible validation library for PHP 8.1 or higher with chainable ru
 composer require solophp/validator
 ```
 
-## Basic Usage
+## Usage
 
 ```php
 use Solo\Validator;
 
 $validator = new Validator();
 
-$data = [
-    'email' => 'test@example.com',
-    'name' => 'John Doe',
-    'age' => 25,
-    'phone' => '+79991234567'
-];
-
-$validator->collect($data);
-
 $validator
-    ->validate('email')
+    ->validate('email', 'test@example.com')
     ->required()
     ->email();
 
 $validator
-    ->validate('phone')
+    ->validate('phone', '+79991234567')
     ->required()
     ->phone('RU')
     ->pattern('\+7[0-9]{10}');
 
 if ($validator->failed()) {
     $errors = $validator->getErrors();
-    // Handle errors
 }
 ```
 
 ## Available Rules
 
-- `required()` - checks if value is not empty
-- `unique(bool $isUnique)` - checks if value is unique
-- `string()` - checks if value is string
-- `numeric()` - checks if value is numeric
-- `pattern(string $regex)` - validates if value matches the pattern
-- `phone(string $region = 'RU')` - validates if value is a valid phone number
-- `email()` - checks if value is valid email address
-- `positive()` - checks if value is positive number
-- `equal(string|int|float|bool $value)` - checks if value equals to provided value
+- `required()` - non-empty value
+- `unique(bool $isUnique)` - unique value
+- `string()` - string type
+- `numeric()` - numeric value 
+- `pattern(string $regex)` - regex match
+- `phone(string $region = 'RU')` - valid phone
+- `email()` - valid email
+- `positive()` - positive number
+- `equal(string|int|float|bool $value)` - equality check
 
-## Custom Error Messages
+## Custom Messages
 
-You can pass custom error messages to any validation rule:
-
+Per rule:
 ```php
 $validator
-    ->validate('email')
-    ->required('Email field is required')
-    ->email('Please enter a valid email address');
+    ->validate('email', 'test@mail.com')
+    ->required('Email required')
+    ->email('Invalid email');
 ```
 
-## Global Custom Messages
-
-You can override default error messages by passing an array to the constructor:
-
+Global:
 ```php
-$customMessages = [
-    'required' => 'Field {field} must not be empty',
-    'email' => 'Field {field} must be a valid email'
-];
-
-$validator = new Validator($customMessages);
+$validator = new Validator([
+    'required' => 'Field {field} required',
+    'email' => 'Field {field} must be valid email'
+]);
 ```
 
 ## Contributing
