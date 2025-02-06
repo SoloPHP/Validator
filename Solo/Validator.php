@@ -3,6 +3,7 @@
 namespace Solo;
 
 use Solo\Validator\ValidatorInterface;
+use Solo\Validator\ValidationRules;
 
 final class Validator implements ValidatorInterface
 {
