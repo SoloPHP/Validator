@@ -2,59 +2,91 @@
 
 namespace Solo;
 
-use Solo\Validator\Interfaces\RulesInterface;
-use Solo\Validator\Interfaces\ValidatorInterface;
-use Solo\Validator\ValidationMessages;
-use Solo\Validator\RulesTrait;
+use Solo\Validator\ValidatorInterface;
 
-class Validator implements ValidatorInterface, RulesInterface
+final class Validator implements ValidatorInterface
 {
-    use RulesTrait;
+    use ValidationRules;
 
     private array $errors = [];
-    private string $field;
-    private $value = '';
-    private ValidationMessages $messages;
+    private array $customRules = [];
+    private array $messages = [];
 
-    public function __construct(array $customMessages = [])
+    public function __construct(array $messages = [])
     {
-        $this->messages = new ValidationMessages($customMessages);
+        $this->messages = array_merge($this->defaultMessages, $messages);
     }
 
-    public function validate(string $field, $value): self
+    public function validate(array $data, array $rules, array $customMessages = []): array
     {
-        $this->field = $field;
-        $this->value = is_null($value) ? '' : $value;
-        return $this;
-    }
+        $this->errors = [];
+        $messages = array_merge($this->messages, $customMessages);
 
-    private function addError(string $type, ?string $message = null, array $placeholders = []): void
-    {
-        if (isset($this->errors[$this->field])) {
-            return;
+        foreach ($rules as $field => $ruleSet) {
+            $rulesArray = explode('|', $ruleSet);
+
+            foreach ($rulesArray as $rule) {
+                if (strpos($rule, ':') !== false) {
+                    [$ruleName, $parameter] = explode(':', $rule, 2);
+                } else {
+                    $ruleName = $rule;
+                    $parameter = null;
+                }
+
+                if (isset($this->customRules[$ruleName])) {
+                    $isValid = call_user_func($this->customRules[$ruleName], $data[$field] ?? null, $parameter, $data);
+                    if (!$isValid) {
+                        $this->addError($field, $this->getErrorMessage($field, $ruleName, $messages));
+                    }
+                } else {
+                    $message = $this->applyValidation($ruleName, $data[$field] ?? null, $parameter, $field);
+                    if ($message) {
+                        $this->addError($field, $this->getErrorMessage($field, $ruleName, $messages, $message));
+                    }
+                }
+            }
         }
 
-        if ($message !== null) {
-            $this->errors[$this->field] = $message;
-        } elseif ($defaultMessage = $this->messages->getMessage($type)) {
-            $placeholders['{field}'] = $this->field;
-            $this->errors[$this->field] = str_replace(
-                array_keys($placeholders),
-                array_values($placeholders),
-                $defaultMessage
-            );
-        } else {
-            $this->errors[$this->field] = sprintf('Some error in field: %s', $this->field);
-        }
+        return $this->errors;
     }
 
-    public function getErrors(): array
+    public function addCustomRule(string $name, callable $callback): void
+    {
+        $this->customRules[$name] = $callback;
+    }
+
+    public function fails(): bool
+    {
+        return !empty($this->errors);
+    }
+
+    public function errors(): array
     {
         return $this->errors;
     }
 
-    public function failed(): bool
+    public function passed(): bool
     {
-        return !empty($this->errors);
+        return empty($this->errors);
+    }
+
+    private function getErrorMessage(string $field, string $rule, array $messages, string $default = ''): string
+    {
+        $customKey = "{$field}.{$rule}";
+        return $messages[$customKey] ?? $messages[$rule] ?? $default ?: sprintf('The %s field failed the %s validation.', $field, $rule);
+    }
+
+    private function addError(string $field, string $message): void
+    {
+        $this->errors[$field][] = $message;
+    }
+
+    private function applyValidation(string $rule, mixed $value, ?string $parameter, string $field): ?string
+    {
+        $method = 'validate' . ucfirst($rule);
+        if (method_exists($this, $method)) {
+            return $this->$method($value, $parameter, $field);
+        }
+        return null;
     }
 }
