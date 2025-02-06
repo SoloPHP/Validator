@@ -1,16 +1,21 @@
 # PHP Validator
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/solophp/validator)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/solophp/validator)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
-Simple and flexible validation library for PHP 8.1+ with chainable rules.
+**Solo Validator** is a lightweight, standalone PHP validation library designed for simplicity and flexibility. It provides essential validation rules out of the box, supports custom rules and messages, and integrates seamlessly into any PHP project.
 
-## Requirements
+## Features
 
-- PHP >= 8.1
-- libphonenumber-for-php
+- **Basic Validation Rules**: Includes `required`, `email`, `min`, `max`, and more.
+- **Custom Rules**: Extend validation with your own rules.
+- **Custom Error Messages**: Override default messages globally or per validation.
+- **Parameterized Rules**: Define rules with parameters (e.g., `min:8`).
+- **Placeholder Support**: Dynamic messages with `:field` and `:param` placeholders.
 
 ## Installation
+
+Install via Composer:
 
 ```bash
 composer require solophp/validator
@@ -19,62 +24,108 @@ composer require solophp/validator
 ## Usage
 
 ```php
+<?php
+
 use Solo\Validator;
 
 $validator = new Validator();
 
-$validator
-    ->validate('email', 'test@example.com')
-    ->required()
-    ->email();
+$data = [
+    'email' => 'user@example.com',
+    'password' => 'secret123'
+];
 
-$validator
-    ->validate('phone', '+79991234567')
-    ->required()
-    ->phone('RU')
-    ->pattern('\+7[0-9]{10}');
+$rules = [
+    'email' => 'required|email',
+    'password' => 'required|min:8'
+];
 
-if ($validator->failed()) {
-    $errors = $validator->getErrors();
+$errors = $validator->validate($data, $rules);
+
+if ($validator->fails()) {
+    // Handle errors
+    print_r($validator->errors());
 }
 ```
 
-## Available Rules
+## Available Validation Rules
 
-- `required()` - non-empty value
-- `unique(bool $isUnique)` - unique value
-- `string()` - string type
-- `numeric()` - numeric value 
-- `pattern(string $regex)` - regex match
-- `phone(string $region = 'RU')` - valid phone
-- `email()` - valid email
-- `positive()` - positive number
-- `equal(string|int|float|bool $value)` - equality check
+### Core Rules
+- **required**: The field must not be empty.
+- **email**: The field must be a valid email address.
+- **min:value**: The field must have a minimum length of `value`.
+- **max:value**: The field must not exceed `value` in length.
 
-## Custom Messages
-
-Per rule:
+Example:
 ```php
-$validator
-    ->validate('email', 'test@mail.com')
-    ->required('Email required')
-    ->email('Invalid email');
+$rules = [
+    'username' => 'required|min:3|max:30',
+    'age' => 'required|min:18'
+];
 ```
 
-Global:
+## Custom Validation Rules
+
+Add your own validation logic using `addCustomRule()`:
+
 ```php
-$validator = new Validator([
-    'required' => 'Field {field} required',
-    'email' => 'Field {field} must be valid email'
+$validator->addCustomRule('even', function ($value, $param, $data) {
+    return (int)$value % 2 === 0;
+});
+
+// Usage
+$rules = ['number' => 'even'];
+$messages = ['number.even' => 'The number must be even.'];
+```
+
+## Custom Error Messages
+
+Override default messages globally or during validation:
+
+```php
+// Global messages
+$messages = [
+    'required' => 'Custom required message.',
+    'email.email' => 'Invalid email format.'
+];
+$validator = new Validator($messages);
+
+// Per-validation messages
+$errors = $validator->validate($data, $rules, [
+    'password.min' => 'Password must be at least 8 characters.'
 ]);
+```
+
+## Error Handling
+
+- **`fails()`**: Check if validation failed.
+- **`errors()`**: Get all validation errors.
+- **`passed()`**: Check if validation succeeded.
+
+```php
+if ($validator->fails()) {
+    foreach ($validator->errors() as $field => $messages) {
+        echo "$field: " . implode(', ', $messages);
+    }
+}
+```
+
+## Placeholders in Messages
+
+Use `:field` and `:param` in messages for dynamic content:
+
+```php
+// Default message for 'min' rule:
+'The :field must be at least :param characters.'
+
+// Becomes:
+'The password must be at least 8 characters.'
 ```
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please make sure to update tests as appropriate.
+Contributions are welcome! Please open an issue or submit a pull request.
 
 ## License
 
-MIT
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
