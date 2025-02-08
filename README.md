@@ -32,19 +32,22 @@ $validator = new Validator();
 
 $data = [
     'email' => 'user@example.com',
-    'password' => 'secret123'
+    'username' => 'john_doe',
+    'age' => 25,
 ];
 
 $rules = [
     'email' => 'required|email',
-    'password' => 'required|min:8'
+    'username' => 'required|min:3|max:20',
+    'age' => 'integer|min_value:18',
 ];
 
 $errors = $validator->validate($data, $rules);
 
 if ($validator->fails()) {
-    // Handle errors
     print_r($validator->errors());
+} else {
+    echo "Validation passed!";
 }
 ```
 
@@ -55,6 +58,14 @@ if ($validator->fails()) {
 - **email**: The field must be a valid email address.
 - **min:value**: The field must have a minimum length of `value`.
 - **max:value**: The field must not exceed `value` in length.
+- **filled**: The field must not be empty.
+- **integer**: The field must be an integer.
+- **string**: The field must be a string.
+- **regex**: The field must match the provided regex pattern.
+- **numeric**: The field must be a number.
+- **array**: The field must be an array.
+- **min_value:value**: The field must be at least `value`.
+- **max_value:value**: The field must not exceed `value`.
 
 Example:
 ```php
@@ -129,3 +140,4 @@ Contributions are welcome! Please open an issue or submit a pull request.
 ## License
 
 This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+
