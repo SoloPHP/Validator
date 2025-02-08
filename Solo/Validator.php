@@ -25,6 +25,11 @@ final class Validator implements ValidatorInterface
 
         foreach ($rules as $field => $ruleSet) {
             $rulesArray = explode('|', $ruleSet);
+            $value = $data[$field] ?? null;
+
+            if ($value === null && in_array('nullable', $rulesArray, true)) {
+                continue;
+            }
 
             foreach ($rulesArray as $rule) {
                 if (strpos($rule, ':') !== false) {
@@ -35,12 +40,12 @@ final class Validator implements ValidatorInterface
                 }
 
                 if (isset($this->customRules[$ruleName])) {
-                    $isValid = call_user_func($this->customRules[$ruleName], $data[$field] ?? null, $parameter, $data);
+                    $isValid = call_user_func($this->customRules[$ruleName], $value, $parameter, $data);
                     if (!$isValid) {
                         $this->addError($field, $this->getErrorMessage($field, $ruleName, $messages));
                     }
                 } else {
-                    $message = $this->applyValidation($ruleName, $data[$field] ?? null, $parameter, $field);
+                    $message = $this->applyValidation($ruleName, $value, $parameter, $field);
                     if ($message) {
                         $this->addError($field, $this->getErrorMessage($field, $ruleName, $messages, $message));
                     }
