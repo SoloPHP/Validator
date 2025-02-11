@@ -1,6 +1,6 @@
 # PHP Validator
 
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](https://github.com/solophp/validator)
+[![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/solophp/validator)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 **Solo Validator** is a lightweight, standalone PHP validation library designed for simplicity and flexibility. It provides essential validation rules out of the box, supports custom rules and messages, and integrates seamlessly into any PHP project.

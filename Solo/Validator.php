@@ -32,7 +32,7 @@ final class Validator implements ValidatorInterface
             }
 
             foreach ($rulesArray as $rule) {
-                if (strpos($rule, ':') !== false) {
+                if (str_contains($rule, ':')) {
                     [$ruleName, $parameter] = explode(':', $rule, 2);
                 } else {
                     $ruleName = $rule;
@@ -76,10 +76,16 @@ final class Validator implements ValidatorInterface
         return empty($this->errors);
     }
 
-    private function getErrorMessage(string $field, string $rule, array $messages, string $default = ''): string
-    {
-        $customKey = "{$field}.{$rule}";
-        return $messages[$customKey] ?? $messages[$rule] ?? $default ?: sprintf('The %s field failed the %s validation.', $field, $rule);
+    private function getErrorMessage(
+        string $field,
+        string $rule,
+        array $messages,
+        string $default = ''
+    ): string {
+        return $messages["{$field}.{$rule}"]
+            ?? $default
+            ?? $messages[$rule]
+            ?? sprintf('The %s field failed the %s validation.', $field, $rule);
     }
 
     private function addError(string $field, string $message): void

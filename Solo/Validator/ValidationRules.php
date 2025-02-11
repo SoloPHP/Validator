@@ -4,7 +4,7 @@ namespace Solo\Validator;
 
 trait ValidationRules
 {
-    private array $defaultMessages = [
+    protected array $defaultMessages = [
         'required' => 'The :field field is required.',
         'email' => 'The :field must be a valid email address.',
         'min' => 'The :field must be at least :param.',
