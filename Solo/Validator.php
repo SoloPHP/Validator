@@ -95,10 +95,18 @@ final class Validator implements ValidatorInterface
 
     private function applyValidation(string $rule, mixed $value, ?string $parameter, string $field): ?string
     {
-        $method = 'validate' . ucfirst($rule);
+        $method = $this->getValidationMethodName($rule);
         if (method_exists($this, $method)) {
             return $this->$method($value, $parameter, $field);
         }
         return null;
+    }
+
+    private function getValidationMethodName(string $rule): string
+    {
+        $methodName = str_replace('_', ' ', $rule);
+        $methodName = ucwords($methodName);
+        $methodName = str_replace(' ', '', $methodName);
+        return 'validate' . $methodName;
     }
 }
