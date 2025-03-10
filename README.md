@@ -1,13 +1,13 @@
 # PHP Validator
 
-[![Version](https://img.shields.io/badge/version-2.0.1-blue.svg)](https://github.com/solophp/validator)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/solophp/validator)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 **Solo Validator** is a lightweight, standalone PHP validation library designed for simplicity and flexibility. It provides essential validation rules out of the box, supports custom rules and messages, and integrates seamlessly into any PHP project.
 
 ## Features
 
-- **Basic Validation Rules**: Includes `required`, `email`, `min`, `max`, and more.
+- **Basic Validation Rules**: Includes `required`, `email`, `phone`, `min`, `max`, and more.
 - **Custom Rules**: Extend validation with your own rules.
 - **Custom Error Messages**: Override default messages globally or per validation.
 - **Parameterized Rules**: Define rules with parameters (e.g., `min:8`).
@@ -56,6 +56,7 @@ if ($validator->fails()) {
 ### Core Rules
 - **required**: The field must not be empty.
 - **email**: The field must be a valid email address.
+- **phone**: he field must be a valid phone number.
 - **min:value**: The field must have a minimum length of `value`.
 - **max:value**: The field must not exceed `value` in length.
 - **filled**: The field must not be empty.
