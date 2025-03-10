@@ -2,11 +2,14 @@
 
 namespace Solo\Validator;
 
+use libphonenumber\PhoneNumberUtil;
+
 trait ValidationRules
 {
     protected array $defaultMessages = [
         'required' => 'The :field field is required.',
         'email' => 'The :field must be a valid email address.',
+        'phone' => 'The :field must be a valid phone number.',
         'min' => 'The :field must be at least :param.',
         'max' => 'The :field must not exceed :param.',
         'filled' => 'The :field must not be empty.',
@@ -30,6 +33,21 @@ trait ValidationRules
     private function validateEmail(mixed $value, ?string $parameter, string $field): ?string
     {
         return !filter_var($value, FILTER_VALIDATE_EMAIL) ? $this->formatMessage('email', $field) : null;
+    }
+
+    private function validatePhone(mixed $value, ?string $regionCode, string $field): ?string
+    {
+        if (!PhoneNumberUtil::isViablePhoneNumber($value)) {
+            return $this->formatMessage('phone', $field);
+        }
+
+        $phoneUtil = PhoneNumberUtil::getInstance();
+        $parsed = $phoneUtil->parse($value, $regionCode);
+        if (!$phoneUtil->isValidNumber($parsed)) {
+            return $this->formatMessage('phone', $field);
+        }
+
+        return null;
     }
 
     private function validateMin(mixed $value, ?string $parameter, string $field): ?string
