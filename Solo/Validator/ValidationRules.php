@@ -10,6 +10,7 @@ trait ValidationRules
         'required' => 'The :field field is required.',
         'email' => 'The :field must be a valid email address.',
         'phone' => 'The :field must be a valid phone number.',
+        'length' => 'The :field must be exactly :param characters.',
         'min' => 'The :field must be at least :param.',
         'max' => 'The :field must not exceed :param.',
         'filled' => 'The :field must not be empty.',
@@ -48,6 +49,13 @@ trait ValidationRules
         }
 
         return null;
+    }
+
+    private function validateLength(mixed $value, ?string $parameter, string $field): ?string
+    {
+        return (isset($parameter) && strlen((string)$value) !== (int)$parameter)
+            ? $this->formatMessage('length', $field, $parameter)
+            : null;
     }
 
     private function validateMin(mixed $value, ?string $parameter, string $field): ?string
