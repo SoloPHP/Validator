@@ -3,8 +3,6 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/solophp/validator.svg)](https://packagist.org/packages/solophp/validator)
 [![License](https://img.shields.io/packagist/l/solophp/validator.svg)](https://opensource.org/licenses/MIT)
 [![PHP Version](https://img.shields.io/packagist/php-v/solophp/validator.svg)](https://php.net)
-[![Tests](https://github.com/solophp/validator/workflows/Tests/badge.svg)](https://github.com/solophp/validator/actions)
-[![Code Coverage](https://img.shields.io/codecov/c/github/solophp/validator)](https://codecov.io/gh/solophp/validator)
 
 **Solo Validator** is a lightweight, standalone PHP validation library designed for simplicity and flexibility. It provides essential validation rules out of the box, supports custom rules and messages, and integrates seamlessly into any PHP project.
 
