@@ -1,6 +1,8 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace Solo;
+declare(strict_types=1);
+
+namespace Solo\Validator;
 
 use Solo\Validator\ValidatorInterface;
 use Solo\Validator\ValidationRules;
@@ -32,12 +34,7 @@ final class Validator implements ValidatorInterface
             }
 
             foreach ($rulesArray as $rule) {
-                if (str_contains($rule, ':')) {
-                    [$ruleName, $parameter] = explode(':', $rule, 2);
-                } else {
-                    $ruleName = $rule;
-                    $parameter = null;
-                }
+                [$ruleName, $parameter] = $this->parseRule($rule);
 
                 if (isset($this->customRules[$ruleName])) {
                     $isValid = call_user_func($this->customRules[$ruleName], $value, $parameter, $data);
@@ -83,8 +80,8 @@ final class Validator implements ValidatorInterface
         string $default = ''
     ): string {
         return $messages["{$field}.{$rule}"]
-            ?? $default
             ?? $messages[$rule]
+            ?? $default
             ?? sprintf('The %s field failed the %s validation.', $field, $rule);
     }
 
@@ -108,5 +105,17 @@ final class Validator implements ValidatorInterface
         $methodName = ucwords($methodName);
         $methodName = str_replace(' ', '', $methodName);
         return 'validate' . $methodName;
+    }
+
+    private function parseRule(string $rule): array
+    {
+        if (str_contains($rule, ':')) {
+            [$ruleName, $parameter] = explode(':', $rule, 2);
+        } else {
+            $ruleName = $rule;
+            $parameter = null;
+        }
+
+        return [$ruleName, $parameter];
     }
 }
