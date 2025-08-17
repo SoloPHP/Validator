@@ -13,6 +13,7 @@
 - **Custom Error Messages**: Override default messages globally or per validation
 - **Parameterized Rules**: Define rules with parameters (e.g., `min:8`)
 - **Placeholder Support**: Dynamic messages with `:field` and `:param` placeholders
+- **Standardized Contracts**: Uses `solophp/contracts` for consistent validation interface
 - **PSR-4 Compliant**: Modern autoloading structure
 - **Comprehensive Testing**: Full test coverage with PHPUnit
 - **Code Standards**: PSR-12 compliant code
