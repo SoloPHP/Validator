@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Solo\Validator;
 
-use Solo\Validator\ValidatorInterface;
-use Solo\Validator\ValidationRules;
+use Solo\Contracts\Validator\ValidatorInterface;
 
 final class Validator implements ValidatorInterface
 {
@@ -20,10 +19,10 @@ final class Validator implements ValidatorInterface
         $this->messages = array_merge($this->defaultMessages, $messages);
     }
 
-    public function validate(array $data, array $rules, array $customMessages = []): array
+    public function validate(array $data, array $rules, array $messages = []): array
     {
         $this->errors = [];
-        $messages = array_merge($this->messages, $customMessages);
+        $messages = array_merge($this->messages, $messages);
 
         foreach ($rules as $field => $ruleSet) {
             $rulesArray = explode('|', $ruleSet);
