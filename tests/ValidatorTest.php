@@ -398,6 +398,28 @@ class ValidatorTest extends TestCase
         $this->assertContains('Password must be at least 8 characters long.', $errors['password']);
     }
 
+    public function testInValidation(): void
+    {
+        $data = ['status' => 'pending'];
+        $rules = ['status' => 'in:active,inactive,draft'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('status', $errors);
+    }
+
+    public function testInValidationPasses(): void
+    {
+        $data = ['status' => 'active'];
+        $rules = ['status' => 'in:active,inactive,draft'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
     public function testGlobalCustomMessages(): void
     {
         $messages = [

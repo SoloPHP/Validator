@@ -22,7 +22,8 @@ trait ValidationRules
         'numeric' => 'The :field must be a number.',
         'array' => 'The :field must be an array.',
         'min_value' => 'The :field must be at least :param.',
-        'max_value' => 'The :field must not exceed :param.'
+        'max_value' => 'The :field must not exceed :param.',
+        'in' => 'The :field must be one of: :param.'
     ];
 
     private function validateRequired(mixed $value, ?string $parameter, string $field): ?string
@@ -146,6 +147,18 @@ trait ValidationRules
         $max = (float)$parameter;
         return ($value > $max)
             ? $this->formatMessage('max_value', $field, $parameter)
+            : null;
+    }
+
+    private function validateIn(mixed $value, ?string $parameter, string $field): ?string
+    {
+        if (!$parameter) {
+            return $this->formatMessage('in', $field, '');
+        }
+
+        $allowedValues = explode(',', $parameter);
+        return !in_array((string)$value, $allowedValues, true)
+            ? $this->formatMessage('in', $field, $parameter)
             : null;
     }
 }

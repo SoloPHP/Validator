@@ -75,6 +75,7 @@ if ($validator->fails()) {
 - **array**: The field must be an array
 - **min_value:value**: The field must be at least `value`
 - **max_value:value**: The field must not exceed `value`
+- **in:value1,value2,...**: The field must be one of the specified values
 - **nullable**: The field can be null or empty
 
 ### Example Usage
@@ -87,7 +88,8 @@ $rules = [
     'email' => 'required|email',
     'phone' => 'phone:US',
     'tags' => 'array',
-    'price' => 'numeric|min_value:0|max_value:1000'
+    'price' => 'numeric|min_value:0|max_value:1000',
+    'status' => 'required|in:active,inactive,draft'
 ];
 ```
 
