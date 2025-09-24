@@ -21,6 +21,7 @@ trait ValidationRules
         'regex' => 'The :field format is invalid.',
         'numeric' => 'The :field must be a number.',
         'array' => 'The :field must be an array.',
+        'boolean' => 'The :field must be true or false.',
         'min_value' => 'The :field must be at least :param.',
         'max_value' => 'The :field must not exceed :param.',
         'in' => 'The :field must be one of: :param.'
@@ -160,5 +161,26 @@ trait ValidationRules
         return !in_array((string)$value, $allowedValues, true)
             ? $this->formatMessage('in', $field, $parameter)
             : null;
+    }
+
+    private function validateBoolean(mixed $value, ?string $parameter, string $field): ?string
+    {
+        if (is_bool($value)) {
+            return null;
+        }
+
+        // Accept common boolean representations
+        if (is_string($value)) {
+            $lower = strtolower($value);
+            if (in_array($lower, ['true', 'false', '1', '0', 'yes', 'no', 'on', 'off'], true)) {
+                return null;
+            }
+        }
+
+        if (is_int($value) && in_array($value, [0, 1], true)) {
+            return null;
+        }
+
+        return $this->formatMessage('boolean', $field);
     }
 }

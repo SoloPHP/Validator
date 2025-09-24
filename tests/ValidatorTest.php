@@ -420,6 +420,153 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
+    public function testBooleanValidation(): void
+    {
+        $data = ['is_active' => 'invalid'];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('is_active', $errors);
+    }
+
+    public function testBooleanValidationWithTrueBool(): void
+    {
+        $data = ['is_active' => true];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testBooleanValidationWithFalseBool(): void
+    {
+        $data = ['is_active' => false];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testBooleanValidationWithStringTrue(): void
+    {
+        $data = ['is_active' => 'true'];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testBooleanValidationWithStringFalse(): void
+    {
+        $data = ['is_active' => 'false'];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testBooleanValidationWithNumericOne(): void
+    {
+        $data = ['is_active' => 1];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testBooleanValidationWithNumericZero(): void
+    {
+        $data = ['is_active' => 0];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testBooleanValidationWithStringOne(): void
+    {
+        $data = ['is_active' => '1'];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testBooleanValidationWithStringZero(): void
+    {
+        $data = ['is_active' => '0'];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testBooleanValidationWithYesNo(): void
+    {
+        $data1 = ['is_active' => 'yes'];
+        $data2 = ['is_active' => 'no'];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors1 = $this->validator->validate($data1, $rules);
+        $errors2 = $this->validator->validate($data2, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors1);
+        $this->assertEmpty($errors2);
+    }
+
+    public function testBooleanValidationWithOnOff(): void
+    {
+        $data1 = ['is_active' => 'on'];
+        $data2 = ['is_active' => 'off'];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors1 = $this->validator->validate($data1, $rules);
+        $errors2 = $this->validator->validate($data2, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors1);
+        $this->assertEmpty($errors2);
+    }
+
+    public function testBooleanValidationCaseInsensitive(): void
+    {
+        $data1 = ['is_active' => 'TRUE'];
+        $data2 = ['is_active' => 'FALSE'];
+        $data3 = ['is_active' => 'Yes'];
+        $data4 = ['is_active' => 'No'];
+        $rules = ['is_active' => 'boolean'];
+
+        $errors1 = $this->validator->validate($data1, $rules);
+        $errors2 = $this->validator->validate($data2, $rules);
+        $errors3 = $this->validator->validate($data3, $rules);
+        $errors4 = $this->validator->validate($data4, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors1);
+        $this->assertEmpty($errors2);
+        $this->assertEmpty($errors3);
+        $this->assertEmpty($errors4);
+    }
+
     public function testGlobalCustomMessages(): void
     {
         $messages = [

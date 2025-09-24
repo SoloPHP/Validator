@@ -73,6 +73,7 @@ if ($validator->fails()) {
 - **regex**: The field must match the provided regex pattern
 - **numeric**: The field must be a number
 - **array**: The field must be an array
+- **boolean**: The field must be true or false (accepts: true/false, 1/0, '1'/'0', 'true'/'false', 'yes'/'no', 'on'/'off'; case-insensitive)
 - **min_value:value**: The field must be at least `value`
 - **max_value:value**: The field must not exceed `value`
 - **in:value1,value2,...**: The field must be one of the specified values
@@ -89,7 +90,8 @@ $rules = [
     'phone' => 'phone:US',
     'tags' => 'array',
     'price' => 'numeric|min_value:0|max_value:1000',
-    'status' => 'required|in:active,inactive,draft'
+    'status' => 'required|in:active,inactive,draft',
+    'is_active' => 'boolean'
 ];
 ```
 
