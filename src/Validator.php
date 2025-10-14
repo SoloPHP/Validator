@@ -10,10 +10,14 @@ final class Validator implements ValidatorInterface
 {
     use ValidationRules;
 
+    /** @var array<string, list<string>> */
     private array $errors = [];
+    /** @var array<string, callable> */
     private array $customRules = [];
+    /** @var array<string, string> */
     private array $messages = [];
 
+    /** @param array<string, string> $messages */
     public function __construct(array $messages = [])
     {
         $this->messages = array_merge($this->defaultMessages, $messages);
@@ -62,6 +66,7 @@ final class Validator implements ValidatorInterface
         return !empty($this->errors);
     }
 
+    /** @return array<string, list<string>> */
     public function errors(): array
     {
         return $this->errors;
@@ -72,6 +77,9 @@ final class Validator implements ValidatorInterface
         return empty($this->errors);
     }
 
+    /**
+     * @param array<string, string> $messages
+     */
     private function getErrorMessage(
         string $field,
         string $rule,
@@ -81,7 +89,7 @@ final class Validator implements ValidatorInterface
         return $messages["{$field}.{$rule}"]
             ?? $messages[$rule]
             ?? $default
-            ?? sprintf('The %s field failed the %s validation.', $field, $rule);
+            ?: sprintf('The %s field failed the %s validation.', $field, $rule);
     }
 
     private function addError(string $field, string $message): void
@@ -106,6 +114,9 @@ final class Validator implements ValidatorInterface
         return 'validate' . $methodName;
     }
 
+    /**
+     * @return array{0: string, 1: string|null}
+     */
     private function parseRule(string $rule): array
     {
         if (str_contains($rule, ':')) {
