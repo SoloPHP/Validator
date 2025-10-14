@@ -8,6 +8,7 @@ use libphonenumber\PhoneNumberUtil;
 
 trait ValidationRules
 {
+    /** @var array<string, string> */
     protected array $defaultMessages = [
         'required' => 'The :field field is required.',
         'email' => 'The :field must be a valid email address.',
