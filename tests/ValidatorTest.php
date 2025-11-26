@@ -584,4 +584,55 @@ class ValidatorTest extends TestCase
         $this->assertTrue($validator->fails());
         $this->assertContains('Please provide a valid email address.', $errors['email']);
     }
+
+    public function testPlaceholderSubstitutionInDefaultMessages(): void
+    {
+        $data = ['username' => 'ab'];
+        $rules = ['username' => 'min:3'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertContains('The username must be at least 3.', $errors['username']);
+    }
+
+    public function testPlaceholderSubstitutionInCustomMessages(): void
+    {
+        $data = ['password' => '12345'];
+        $rules = ['password' => 'min:8'];
+        $messages = ['min' => 'The :field field must have at least :param characters.'];
+
+        $errors = $this->validator->validate($data, $rules, $messages);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertContains('The password field must have at least 8 characters.', $errors['password']);
+    }
+
+    public function testPlaceholderSubstitutionInFieldSpecificMessages(): void
+    {
+        $data = ['email' => 'test'];
+        $rules = ['email' => 'min:5'];
+        $messages = ['email.min' => 'Email must be at least :param characters long.'];
+
+        $errors = $this->validator->validate($data, $rules, $messages);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertContains('Email must be at least 5 characters long.', $errors['email']);
+    }
+
+    public function testPlaceholderSubstitutionInGlobalMessages(): void
+    {
+        $messages = [
+            'max' => 'The :field cannot exceed :param characters.'
+        ];
+        $validator = new Validator($messages);
+
+        $data = ['title' => 'This is a very long title that exceeds limit'];
+        $rules = ['title' => 'max:20'];
+
+        $errors = $validator->validate($data, $rules);
+
+        $this->assertTrue($validator->fails());
+        $this->assertContains('The title cannot exceed 20 characters.', $errors['title']);
+    }
 }
