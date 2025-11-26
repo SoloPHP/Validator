@@ -42,12 +42,19 @@ final class Validator implements ValidatorInterface
                 if (isset($this->customRules[$ruleName])) {
                     $isValid = call_user_func($this->customRules[$ruleName], $value, $parameter, $data);
                     if (!$isValid) {
-                        $this->addError($field, $this->getErrorMessage($field, $ruleName, $messages));
+                        $this->addError($field, $this->getErrorMessage($field, $ruleName, $messages, '', $parameter));
                     }
                 } else {
                     $message = $this->applyValidation($ruleName, $value, $parameter, $field);
                     if ($message) {
-                        $this->addError($field, $this->getErrorMessage($field, $ruleName, $messages, $message));
+                        $errorMessage = $this->getErrorMessage(
+                            $field,
+                            $ruleName,
+                            $messages,
+                            $message,
+                            $parameter
+                        );
+                        $this->addError($field, $errorMessage);
                     }
                 }
             }
@@ -84,12 +91,15 @@ final class Validator implements ValidatorInterface
         string $field,
         string $rule,
         array $messages,
-        string $default = ''
+        string $default = '',
+        ?string $parameter = null
     ): string {
-        return $messages["{$field}.{$rule}"]
+        $message = $messages["{$field}.{$rule}"]
             ?? $messages[$rule]
             ?? $default
             ?: sprintf('The %s field failed the %s validation.', $field, $rule);
+
+        return str_replace([':field', ':param'], [$field, $parameter ?? ''], $message);
     }
 
     private function addError(string $field, string $message): void
