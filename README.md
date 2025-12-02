@@ -78,6 +78,8 @@ if ($validator->fails()) {
 - **max_value:value**: The field must not exceed `value`
 - **in:value1,value2,...**: The field must be one of the specified values
 - **nullable**: The field can be null or empty
+- **date**: The field must be a valid date
+- **date_format:format**: The field must match the specified date format (e.g., `date_format:Y-m-d`)
 
 ### Example Usage
 
@@ -91,7 +93,9 @@ $rules = [
     'tags' => 'array',
     'price' => 'numeric|min_value:0|max_value:1000',
     'status' => 'required|in:active,inactive,draft',
-    'is_active' => 'boolean'
+    'is_active' => 'boolean',
+    'birth_date' => 'date',
+    'event_date' => 'date_format:Y-m-d'
 ];
 ```
 
