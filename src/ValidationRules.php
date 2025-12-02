@@ -25,7 +25,9 @@ trait ValidationRules
         'boolean' => 'The :field must be true or false.',
         'min_value' => 'The :field must be at least :param.',
         'max_value' => 'The :field must not exceed :param.',
-        'in' => 'The :field must be one of: :param.'
+        'in' => 'The :field must be one of: :param.',
+        'date' => 'The :field must be a valid date.',
+        'date_format' => 'The :field must match the format :param.'
     ];
 
     private function validateRequired(mixed $value, ?string $parameter, string $field): ?string
@@ -183,5 +185,33 @@ trait ValidationRules
         }
 
         return $this->formatMessage('boolean', $field);
+    }
+
+    private function validateDate(mixed $value, ?string $parameter, string $field): ?string
+    {
+        if (!is_string($value) && !is_numeric($value)) {
+            return $this->formatMessage('date', $field);
+        }
+
+        try {
+            $dateString = is_numeric($value) ? '@' . $value : (string) $value;
+            new \DateTime($dateString);
+            return null;
+        } catch (\Exception) {
+            return $this->formatMessage('date', $field);
+        }
+    }
+
+    private function validateDateFormat(mixed $value, ?string $parameter, string $field): ?string
+    {
+        if (!is_string($value) || empty($parameter)) {
+            return $this->formatMessage('date_format', $field, $parameter);
+        }
+
+        $parsed = \DateTime::createFromFormat($parameter, $value);
+
+        return ($parsed !== false && $parsed->format($parameter) === $value)
+            ? null
+            : $this->formatMessage('date_format', $field, $parameter);
     }
 }

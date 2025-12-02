@@ -635,4 +635,150 @@ class ValidatorTest extends TestCase
         $this->assertTrue($validator->fails());
         $this->assertContains('The title cannot exceed 20 characters.', $errors['title']);
     }
+
+    public function testDateValidation(): void
+    {
+        $data = ['birth_date' => 'not-a-date'];
+        $rules = ['birth_date' => 'date'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('birth_date', $errors);
+    }
+
+    public function testDateValidationPasses(): void
+    {
+        $data = ['birth_date' => '2024-01-15'];
+        $rules = ['birth_date' => 'date'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testDateValidationWithVariousFormats(): void
+    {
+        $validDates = [
+            '2024-01-15',
+            '15 January 2024',
+            'January 15, 2024',
+            '01/15/2024',
+            'next Monday',
+            '+1 week',
+        ];
+
+        foreach ($validDates as $date) {
+            $data = ['event_date' => $date];
+            $rules = ['event_date' => 'date'];
+
+            $errors = $this->validator->validate($data, $rules);
+
+            $this->assertTrue($this->validator->passed(), "Date '$date' should be valid");
+            $this->assertEmpty($errors);
+        }
+    }
+
+    public function testDateValidationWithNumericTimestamp(): void
+    {
+        $data = ['timestamp' => 1705334400];
+        $rules = ['timestamp' => 'date'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testDateValidationWithNonStringNonNumeric(): void
+    {
+        $data = ['birth_date' => ['2024-01-15']];
+        $rules = ['birth_date' => 'date'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('birth_date', $errors);
+    }
+
+    public function testDateFormatValidation(): void
+    {
+        $data = ['event_date' => '15-01-2024'];
+        $rules = ['event_date' => 'date_format:Y-m-d'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('event_date', $errors);
+    }
+
+    public function testDateFormatValidationPasses(): void
+    {
+        $data = ['event_date' => '2024-01-15'];
+        $rules = ['event_date' => 'date_format:Y-m-d'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testDateFormatValidationWithDifferentFormats(): void
+    {
+        $testCases = [
+            ['value' => '15/01/2024', 'format' => 'd/m/Y'],
+            ['value' => '01-15-2024', 'format' => 'm-d-Y'],
+            ['value' => '2024.01.15', 'format' => 'Y.m.d'],
+            ['value' => '15 Jan 2024', 'format' => 'd M Y'],
+            ['value' => '14:30:00', 'format' => 'H:i:s'],
+            ['value' => '2024-01-15 14:30:00', 'format' => 'Y-m-d H:i:s'],
+        ];
+
+        foreach ($testCases as $testCase) {
+            $data = ['date_field' => $testCase['value']];
+            $rules = ['date_field' => 'date_format:' . $testCase['format']];
+
+            $errors = $this->validator->validate($data, $rules);
+
+            $this->assertTrue(
+                $this->validator->passed(),
+                "Value '{$testCase['value']}' should match format '{$testCase['format']}'"
+            );
+            $this->assertEmpty($errors);
+        }
+    }
+
+    public function testDateFormatValidationWithInvalidFormat(): void
+    {
+        $data = ['event_date' => '2024-13-45'];
+        $rules = ['event_date' => 'date_format:Y-m-d'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('event_date', $errors);
+    }
+
+    public function testDateFormatValidationWithNonString(): void
+    {
+        $data = ['event_date' => 12345];
+        $rules = ['event_date' => 'date_format:Y-m-d'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('event_date', $errors);
+    }
+
+    public function testDateFormatValidationWithoutParameter(): void
+    {
+        $data = ['event_date' => '2024-01-15'];
+        $rules = ['event_date' => 'date_format'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('event_date', $errors);
+    }
 }
