@@ -22,6 +22,7 @@ trait ValidationRules
         'regex' => 'The :field format is invalid.',
         'numeric' => 'The :field must be a number.',
         'array' => 'The :field must be an array.',
+        'array_keys' => 'The :field contains invalid keys. Allowed: :param.',
         'boolean' => 'The :field must be true or false.',
         'min_value' => 'The :field must be at least :param.',
         'max_value' => 'The :field must not exceed :param.',
@@ -127,6 +128,17 @@ trait ValidationRules
         if (!is_array($value)) {
             return $this->formatMessage('array', $field);
         }
+
+        if ($parameter !== null) {
+            $allowedKeys = explode(',', $parameter);
+
+            foreach (array_keys($value) as $key) {
+                if (!in_array((string) $key, $allowedKeys, true)) {
+                    return $this->formatMessage('array_keys', $field, $parameter);
+                }
+            }
+        }
+
         return null;
     }
 
@@ -193,6 +205,14 @@ trait ValidationRules
             return $this->formatMessage('date', $field);
         }
 
+        if ($parameter !== null) {
+            $parsed = \DateTime::createFromFormat($parameter, (string) $value);
+
+            return ($parsed !== false && $parsed->format($parameter) === (string) $value)
+                ? null
+                : $this->formatMessage('date_format', $field, $parameter);
+        }
+
         try {
             $dateString = is_numeric($value) ? '@' . $value : (string) $value;
             new \DateTime($dateString);
@@ -200,18 +220,5 @@ trait ValidationRules
         } catch (\Exception) {
             return $this->formatMessage('date', $field);
         }
-    }
-
-    private function validateDateFormat(mixed $value, ?string $parameter, string $field): ?string
-    {
-        if (!is_string($value) || empty($parameter)) {
-            return $this->formatMessage('date_format', $field, $parameter);
-        }
-
-        $parsed = \DateTime::createFromFormat($parameter, $value);
-
-        return ($parsed !== false && $parsed->format($parameter) === $value)
-            ? null
-            : $this->formatMessage('date_format', $field, $parameter);
     }
 }

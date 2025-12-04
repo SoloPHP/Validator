@@ -702,10 +702,10 @@ class ValidatorTest extends TestCase
         $this->assertArrayHasKey('birth_date', $errors);
     }
 
-    public function testDateFormatValidation(): void
+    public function testDateWithFormatValidation(): void
     {
         $data = ['event_date' => '15-01-2024'];
-        $rules = ['event_date' => 'date_format:Y-m-d'];
+        $rules = ['event_date' => 'date:Y-m-d'];
 
         $errors = $this->validator->validate($data, $rules);
 
@@ -713,10 +713,10 @@ class ValidatorTest extends TestCase
         $this->assertArrayHasKey('event_date', $errors);
     }
 
-    public function testDateFormatValidationPasses(): void
+    public function testDateWithFormatValidationPasses(): void
     {
         $data = ['event_date' => '2024-01-15'];
-        $rules = ['event_date' => 'date_format:Y-m-d'];
+        $rules = ['event_date' => 'date:Y-m-d'];
 
         $errors = $this->validator->validate($data, $rules);
 
@@ -724,7 +724,7 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
-    public function testDateFormatValidationWithDifferentFormats(): void
+    public function testDateWithFormatValidationWithDifferentFormats(): void
     {
         $testCases = [
             ['value' => '15/01/2024', 'format' => 'd/m/Y'],
@@ -737,7 +737,7 @@ class ValidatorTest extends TestCase
 
         foreach ($testCases as $testCase) {
             $data = ['date_field' => $testCase['value']];
-            $rules = ['date_field' => 'date_format:' . $testCase['format']];
+            $rules = ['date_field' => 'date:' . $testCase['format']];
 
             $errors = $this->validator->validate($data, $rules);
 
@@ -749,10 +749,10 @@ class ValidatorTest extends TestCase
         }
     }
 
-    public function testDateFormatValidationWithInvalidFormat(): void
+    public function testDateWithFormatValidationWithInvalidDate(): void
     {
         $data = ['event_date' => '2024-13-45'];
-        $rules = ['event_date' => 'date_format:Y-m-d'];
+        $rules = ['event_date' => 'date:Y-m-d'];
 
         $errors = $this->validator->validate($data, $rules);
 
@@ -760,10 +760,10 @@ class ValidatorTest extends TestCase
         $this->assertArrayHasKey('event_date', $errors);
     }
 
-    public function testDateFormatValidationWithNonString(): void
+    public function testDateWithFormatValidationWithNonString(): void
     {
         $data = ['event_date' => 12345];
-        $rules = ['event_date' => 'date_format:Y-m-d'];
+        $rules = ['event_date' => 'date:Y-m-d'];
 
         $errors = $this->validator->validate($data, $rules);
 
@@ -771,14 +771,147 @@ class ValidatorTest extends TestCase
         $this->assertArrayHasKey('event_date', $errors);
     }
 
-    public function testDateFormatValidationWithoutParameter(): void
+    public function testArrayWithAllowedKeys(): void
     {
-        $data = ['event_date' => '2024-01-15'];
-        $rules = ['event_date' => 'date_format'];
+        $data = ['user' => ['name' => 'John', 'email' => 'john@example.com']];
+        $rules = ['user' => 'array:name,email'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testArrayWithInvalidKeys(): void
+    {
+        $data = ['user' => ['name' => 'John', 'password' => 'secret']];
+        $rules = ['user' => 'array:name,email'];
 
         $errors = $this->validator->validate($data, $rules);
 
         $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('event_date', $errors);
+        $this->assertArrayHasKey('user', $errors);
+    }
+
+    public function testArrayWithSubsetOfAllowedKeys(): void
+    {
+        $data = ['user' => ['name' => 'John']];
+        $rules = ['user' => 'array:name,email,phone'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testArrayWithNumericKeys(): void
+    {
+        $data = ['items' => [0 => 'first', 1 => 'second']];
+        $rules = ['items' => 'array:0,1,2'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testPhoneValidation(): void
+    {
+        $data = ['phone' => 'not-a-phone'];
+        $rules = ['phone' => 'phone:US'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('phone', $errors);
+    }
+
+    public function testPhoneValidationPasses(): void
+    {
+        $data = ['phone' => '+14155552671'];
+        $rules = ['phone' => 'phone:US'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testPhoneValidationInvalidNumber(): void
+    {
+        $data = ['phone' => '+14155'];
+        $rules = ['phone' => 'phone:US'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('phone', $errors);
+    }
+
+    public function testFilledValidationWithNull(): void
+    {
+        $data = ['description' => null];
+        $rules = ['description' => 'filled'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('description', $errors);
+    }
+
+    public function testRegexValidationWithInvalidPattern(): void
+    {
+        $data = ['username' => 'test'];
+        $rules = ['username' => 'regex:invalid'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('username', $errors);
+    }
+
+    public function testMaxValueValidationWithNonNumeric(): void
+    {
+        $data = ['price' => 'not-a-number'];
+        $rules = ['price' => 'max_value:100'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('price', $errors);
+    }
+
+    public function testInValidationWithoutParameter(): void
+    {
+        $data = ['status' => 'active'];
+        $rules = ['status' => 'in'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('status', $errors);
+    }
+
+    public function testErrorsMethod(): void
+    {
+        $data = ['email' => 'invalid'];
+        $rules = ['email' => 'email'];
+
+        $this->validator->validate($data, $rules);
+
+        $errors = $this->validator->errors();
+        $this->assertIsArray($errors);
+        $this->assertArrayHasKey('email', $errors);
+    }
+
+    public function testUnknownRuleIsIgnored(): void
+    {
+        $data = ['field' => 'value'];
+        $rules = ['field' => 'unknown_rule'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
     }
 }

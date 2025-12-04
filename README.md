@@ -3,6 +3,7 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/solophp/validator.svg)](https://packagist.org/packages/solophp/validator)
 [![License](https://img.shields.io/packagist/l/solophp/validator.svg)](https://opensource.org/licenses/MIT)
 [![PHP Version](https://img.shields.io/packagist/php-v/solophp/validator.svg)](https://php.net)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)]()
 
 **Solo Validator** is a lightweight, standalone PHP validation library designed for simplicity and flexibility. It provides essential validation rules out of the box, supports custom rules and messages, and integrates seamlessly into any PHP project.
 
@@ -73,13 +74,14 @@ if ($validator->fails()) {
 - **regex**: The field must match the provided regex pattern
 - **numeric**: The field must be a number
 - **array**: The field must be an array
+- **array:key1,key2,...**: The field must be an array containing only the specified keys
 - **boolean**: The field must be true or false (accepts: true/false, 1/0, '1'/'0', 'true'/'false', 'yes'/'no', 'on'/'off'; case-insensitive)
 - **min_value:value**: The field must be at least `value`
 - **max_value:value**: The field must not exceed `value`
 - **in:value1,value2,...**: The field must be one of the specified values
 - **nullable**: The field can be null or empty
 - **date**: The field must be a valid date
-- **date_format:format**: The field must match the specified date format (e.g., `date_format:Y-m-d`)
+- **date:format**: The field must match the specified date format (e.g., `date:Y-m-d`)
 
 ### Example Usage
 
@@ -91,11 +93,12 @@ $rules = [
     'email' => 'required|email',
     'phone' => 'phone:US',
     'tags' => 'array',
+    'metadata' => 'array:name,email,phone',
     'price' => 'numeric|min_value:0|max_value:1000',
     'status' => 'required|in:active,inactive,draft',
     'is_active' => 'boolean',
     'birth_date' => 'date',
-    'event_date' => 'date_format:Y-m-d'
+    'event_date' => 'date:Y-m-d'
 ];
 ```
 
