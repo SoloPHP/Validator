@@ -94,6 +94,7 @@ final class Validator implements ValidatorInterface
         string $default = '',
         ?string $parameter = null
     ): string {
+        // Priority: field.rule > rule > default > fallback
         $message = $messages["{$field}.{$rule}"]
             ?? $messages[$rule]
             ?? $default

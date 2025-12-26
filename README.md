@@ -78,7 +78,7 @@ if ($validator->fails()) {
 - **boolean**: The field must be true or false (accepts: true/false, 1/0, '1'/'0', 'true'/'false', 'yes'/'no', 'on'/'off'; case-insensitive)
 - **min_value:value**: The field must be at least `value`
 - **max_value:value**: The field must not exceed `value`
-- **in:value1,value2,...**: The field must be one of the specified values
+- **in:value1,value2,...**: The field must be one of the specified values (supports arrays)
 - **nullable**: The field can be null or empty
 - **date**: The field must be a valid date
 - **date:format**: The field must match the specified date format (e.g., `date:Y-m-d`)
