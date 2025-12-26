@@ -173,6 +173,16 @@ trait ValidationRules
         }
 
         $allowedValues = explode(',', $parameter);
+
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (!in_array((string)$item, $allowedValues, true)) {
+                    return $this->formatMessage('in', $field, $parameter);
+                }
+            }
+            return null;
+        }
+
         return !in_array((string)$value, $allowedValues, true)
             ? $this->formatMessage('in', $field, $parameter)
             : null;

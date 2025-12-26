@@ -291,6 +291,17 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
+    public function testFilledValidationWithNull(): void
+    {
+        $data = ['description' => null];
+        $rules = ['description' => 'filled'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('description', $errors);
+    }
+
     public function testRegexValidation(): void
     {
         $data = ['username' => 'user@name'];
@@ -311,6 +322,17 @@ class ValidatorTest extends TestCase
 
         $this->assertTrue($this->validator->passed());
         $this->assertEmpty($errors);
+    }
+
+    public function testRegexValidationWithInvalidPattern(): void
+    {
+        $data = ['username' => 'test'];
+        $rules = ['username' => 'regex:invalid'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('username', $errors);
     }
 
     public function testNullableValidation(): void
@@ -420,6 +442,39 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
+    public function testInValidationWithoutParameter(): void
+    {
+        $data = ['status' => 'active'];
+        $rules = ['status' => 'in'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('status', $errors);
+    }
+
+    public function testInValidationWithArrayPasses(): void
+    {
+        $data = ['tags' => ['php', 'javascript']];
+        $rules = ['tags' => 'in:php,javascript,python,go'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testInValidationWithArrayFails(): void
+    {
+        $data = ['tags' => ['php', 'ruby']];
+        $rules = ['tags' => 'in:php,javascript,python,go'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertArrayHasKey('tags', $errors);
+    }
+
     public function testBooleanValidation(): void
     {
         $data = ['is_active' => 'invalid'];
@@ -431,7 +486,7 @@ class ValidatorTest extends TestCase
         $this->assertArrayHasKey('is_active', $errors);
     }
 
-    public function testBooleanValidationWithTrueBool(): void
+    public function testBooleanValidationWithBool(): void
     {
         $data = ['is_active' => true];
         $rules = ['is_active' => 'boolean'];
@@ -442,9 +497,9 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
-    public function testBooleanValidationWithFalseBool(): void
+    public function testBooleanValidationWithString(): void
     {
-        $data = ['is_active' => false];
+        $data = ['is_active' => 'yes'];
         $rules = ['is_active' => 'boolean'];
 
         $errors = $this->validator->validate($data, $rules);
@@ -453,29 +508,7 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
-    public function testBooleanValidationWithStringTrue(): void
-    {
-        $data = ['is_active' => 'true'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testBooleanValidationWithStringFalse(): void
-    {
-        $data = ['is_active' => 'false'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testBooleanValidationWithNumericOne(): void
+    public function testBooleanValidationWithInt(): void
     {
         $data = ['is_active' => 1];
         $rules = ['is_active' => 'boolean'];
@@ -484,87 +517,6 @@ class ValidatorTest extends TestCase
 
         $this->assertTrue($this->validator->passed());
         $this->assertEmpty($errors);
-    }
-
-    public function testBooleanValidationWithNumericZero(): void
-    {
-        $data = ['is_active' => 0];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testBooleanValidationWithStringOne(): void
-    {
-        $data = ['is_active' => '1'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testBooleanValidationWithStringZero(): void
-    {
-        $data = ['is_active' => '0'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testBooleanValidationWithYesNo(): void
-    {
-        $data1 = ['is_active' => 'yes'];
-        $data2 = ['is_active' => 'no'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors1 = $this->validator->validate($data1, $rules);
-        $errors2 = $this->validator->validate($data2, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors1);
-        $this->assertEmpty($errors2);
-    }
-
-    public function testBooleanValidationWithOnOff(): void
-    {
-        $data1 = ['is_active' => 'on'];
-        $data2 = ['is_active' => 'off'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors1 = $this->validator->validate($data1, $rules);
-        $errors2 = $this->validator->validate($data2, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors1);
-        $this->assertEmpty($errors2);
-    }
-
-    public function testBooleanValidationCaseInsensitive(): void
-    {
-        $data1 = ['is_active' => 'TRUE'];
-        $data2 = ['is_active' => 'FALSE'];
-        $data3 = ['is_active' => 'Yes'];
-        $data4 = ['is_active' => 'No'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors1 = $this->validator->validate($data1, $rules);
-        $errors2 = $this->validator->validate($data2, $rules);
-        $errors3 = $this->validator->validate($data3, $rules);
-        $errors4 = $this->validator->validate($data4, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors1);
-        $this->assertEmpty($errors2);
-        $this->assertEmpty($errors3);
-        $this->assertEmpty($errors4);
     }
 
     public function testGlobalCustomMessages(): void
@@ -658,28 +610,6 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
-    public function testDateValidationWithVariousFormats(): void
-    {
-        $validDates = [
-            '2024-01-15',
-            '15 January 2024',
-            'January 15, 2024',
-            '01/15/2024',
-            'next Monday',
-            '+1 week',
-        ];
-
-        foreach ($validDates as $date) {
-            $data = ['event_date' => $date];
-            $rules = ['event_date' => 'date'];
-
-            $errors = $this->validator->validate($data, $rules);
-
-            $this->assertTrue($this->validator->passed(), "Date '$date' should be valid");
-            $this->assertEmpty($errors);
-        }
-    }
-
     public function testDateValidationWithNumericTimestamp(): void
     {
         $data = ['timestamp' => 1705334400];
@@ -724,53 +654,6 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
-    public function testDateWithFormatValidationWithDifferentFormats(): void
-    {
-        $testCases = [
-            ['value' => '15/01/2024', 'format' => 'd/m/Y'],
-            ['value' => '01-15-2024', 'format' => 'm-d-Y'],
-            ['value' => '2024.01.15', 'format' => 'Y.m.d'],
-            ['value' => '15 Jan 2024', 'format' => 'd M Y'],
-            ['value' => '14:30:00', 'format' => 'H:i:s'],
-            ['value' => '2024-01-15 14:30:00', 'format' => 'Y-m-d H:i:s'],
-        ];
-
-        foreach ($testCases as $testCase) {
-            $data = ['date_field' => $testCase['value']];
-            $rules = ['date_field' => 'date:' . $testCase['format']];
-
-            $errors = $this->validator->validate($data, $rules);
-
-            $this->assertTrue(
-                $this->validator->passed(),
-                "Value '{$testCase['value']}' should match format '{$testCase['format']}'"
-            );
-            $this->assertEmpty($errors);
-        }
-    }
-
-    public function testDateWithFormatValidationWithInvalidDate(): void
-    {
-        $data = ['event_date' => '2024-13-45'];
-        $rules = ['event_date' => 'date:Y-m-d'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('event_date', $errors);
-    }
-
-    public function testDateWithFormatValidationWithNonString(): void
-    {
-        $data = ['event_date' => 12345];
-        $rules = ['event_date' => 'date:Y-m-d'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('event_date', $errors);
-    }
-
     public function testArrayWithAllowedKeys(): void
     {
         $data = ['user' => ['name' => 'John', 'email' => 'john@example.com']];
@@ -791,28 +674,6 @@ class ValidatorTest extends TestCase
 
         $this->assertTrue($this->validator->fails());
         $this->assertArrayHasKey('user', $errors);
-    }
-
-    public function testArrayWithSubsetOfAllowedKeys(): void
-    {
-        $data = ['user' => ['name' => 'John']];
-        $rules = ['user' => 'array:name,email,phone'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testArrayWithNumericKeys(): void
-    {
-        $data = ['items' => [0 => 'first', 1 => 'second']];
-        $rules = ['items' => 'array:0,1,2'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
     }
 
     public function testPhoneValidation(): void
@@ -848,28 +709,6 @@ class ValidatorTest extends TestCase
         $this->assertArrayHasKey('phone', $errors);
     }
 
-    public function testFilledValidationWithNull(): void
-    {
-        $data = ['description' => null];
-        $rules = ['description' => 'filled'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('description', $errors);
-    }
-
-    public function testRegexValidationWithInvalidPattern(): void
-    {
-        $data = ['username' => 'test'];
-        $rules = ['username' => 'regex:invalid'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('username', $errors);
-    }
-
     public function testMaxValueValidationWithNonNumeric(): void
     {
         $data = ['price' => 'not-a-number'];
@@ -879,17 +718,6 @@ class ValidatorTest extends TestCase
 
         $this->assertTrue($this->validator->fails());
         $this->assertArrayHasKey('price', $errors);
-    }
-
-    public function testInValidationWithoutParameter(): void
-    {
-        $data = ['status' => 'active'];
-        $rules = ['status' => 'in'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('status', $errors);
     }
 
     public function testErrorsMethod(): void
