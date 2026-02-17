@@ -8,125 +8,132 @@ use libphonenumber\PhoneNumberUtil;
 
 trait ValidationRules
 {
-    /** @var array<string, string> */
-    protected array $defaultMessages = [
-        'required' => 'The :field field is required.',
-        'email' => 'The :field must be a valid email address.',
-        'phone' => 'The :field must be a valid phone number.',
-        'length' => 'The :field must be exactly :param characters.',
-        'min' => 'The :field must be at least :param.',
-        'max' => 'The :field must not exceed :param.',
-        'filled' => 'The :field must not be empty.',
-        'integer' => 'The :field must be an integer.',
-        'string' => 'The :field must be a string.',
-        'regex' => 'The :field format is invalid.',
-        'numeric' => 'The :field must be a number.',
-        'array' => 'The :field must be an array.',
-        'array_keys' => 'The :field contains invalid keys. Allowed: :param.',
-        'boolean' => 'The :field must be true or false.',
-        'min_value' => 'The :field must be at least :param.',
-        'max_value' => 'The :field must not exceed :param.',
-        'in' => 'The :field must be one of: :param.',
-        'date' => 'The :field must be a valid date.',
-        'date_format' => 'The :field must match the format :param.'
-    ];
-
-    private function validateRequired(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateRequired(mixed $value, ?string $parameter, string $field): ?array
     {
         if ($value === null || $value === '' || (is_array($value) && empty($value))) {
-            return $this->formatMessage('required', $field);
+            return ['rule' => 'required'];
         }
         return null;
     }
 
-    private function validateEmail(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateEmail(mixed $value, ?string $parameter, string $field): ?array
     {
-        return !filter_var($value, FILTER_VALIDATE_EMAIL) ? $this->formatMessage('email', $field) : null;
+        return !filter_var($value, FILTER_VALIDATE_EMAIL) ? ['rule' => 'email'] : null;
     }
 
-    private function validatePhone(mixed $value, ?string $regionCode, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validatePhone(mixed $value, ?string $regionCode, string $field): ?array
     {
         if (!PhoneNumberUtil::isViablePhoneNumber($value)) {
-            return $this->formatMessage('phone', $field);
+            return ['rule' => 'phone'];
         }
 
         $phoneUtil = PhoneNumberUtil::getInstance();
         $parsed = $phoneUtil->parse($value, $regionCode);
         if (!$phoneUtil->isValidNumber($parsed)) {
-            return $this->formatMessage('phone', $field);
+            return ['rule' => 'phone'];
         }
 
         return null;
     }
 
-    private function validateLength(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateLength(mixed $value, ?string $parameter, string $field): ?array
     {
         return (isset($parameter) && strlen((string)$value) !== (int)$parameter)
-            ? $this->formatMessage('length', $field, $parameter)
+            ? ['rule' => 'length', 'params' => explode(',', $parameter)]
             : null;
     }
 
-    private function validateMin(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateMin(mixed $value, ?string $parameter, string $field): ?array
     {
         return (isset($parameter) && strlen((string)$value) < (int)$parameter)
-            ? $this->formatMessage('min', $field, $parameter)
+            ? ['rule' => 'min', 'params' => explode(',', $parameter)]
             : null;
     }
 
-    private function validateMax(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateMax(mixed $value, ?string $parameter, string $field): ?array
     {
         return (isset($parameter) && strlen((string)$value) > (int)$parameter)
-            ? $this->formatMessage('max', $field, $parameter)
+            ? ['rule' => 'max', 'params' => explode(',', $parameter)]
             : null;
     }
 
-    private function validateFilled(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateFilled(mixed $value, ?string $parameter, string $field): ?array
     {
         if ($value === null) {
-            return $this->formatMessage('filled', $field);
+            return ['rule' => 'filled'];
         }
         if ((is_string($value) && trim($value) === '') || (is_array($value) && empty($value))) {
-            return $this->formatMessage('filled', $field);
+            return ['rule' => 'filled'];
         }
         return null;
     }
 
-    private function validateInteger(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateInteger(mixed $value, ?string $parameter, string $field): ?array
     {
-        return filter_var($value, FILTER_VALIDATE_INT) === false ? $this->formatMessage('integer', $field) : null;
+        return filter_var($value, FILTER_VALIDATE_INT) === false ? ['rule' => 'integer'] : null;
     }
 
-    private function validateString(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateString(mixed $value, ?string $parameter, string $field): ?array
     {
-        return !is_string($value) ? $this->formatMessage('string', $field) : null;
+        return !is_string($value) ? ['rule' => 'string'] : null;
     }
 
-    private function validateRegex(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateRegex(mixed $value, ?string $parameter, string $field): ?array
     {
         if (!$parameter || !preg_match('/^\/.*\/[imsxADSUXJu]*$/', $parameter)) {
-            return $this->formatMessage('regex', $field);
+            return ['rule' => 'regex'];
         }
-        return !preg_match($parameter, (string)$value) ? $this->formatMessage('regex', $field) : null;
+        return !preg_match($parameter, (string)$value) ? ['rule' => 'regex'] : null;
     }
 
-    private function formatMessage(string $key, string $field, ?string $param = null): string
-    {
-        $message = $this->defaultMessages[$key] ?? 'Validation error.';
-        return str_replace([':field', ':param'], [$field, $param ?? ''], $message);
-    }
-
-    private function validateNumeric(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateNumeric(mixed $value, ?string $parameter, string $field): ?array
     {
         if (!is_numeric($value)) {
-            return $this->formatMessage('numeric', $field);
+            return ['rule' => 'numeric'];
         }
         return null;
     }
 
-    private function validateArray(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateArray(mixed $value, ?string $parameter, string $field): ?array
     {
         if (!is_array($value)) {
-            return $this->formatMessage('array', $field);
+            return ['rule' => 'array'];
         }
 
         if ($parameter !== null) {
@@ -134,7 +141,7 @@ trait ValidationRules
 
             foreach (array_keys($value) as $key) {
                 if (!in_array((string) $key, $allowedKeys, true)) {
-                    return $this->formatMessage('array_keys', $field, $parameter);
+                    return ['rule' => 'array_keys', 'params' => explode(',', $parameter)];
                 }
             }
         }
@@ -142,34 +149,43 @@ trait ValidationRules
         return null;
     }
 
-    private function validateMinValue(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateMinValue(mixed $value, ?string $parameter, string $field): ?array
     {
         if (!is_numeric($value)) {
-            return $this->formatMessage('numeric', $field);
+            return ['rule' => 'numeric'];
         }
 
         $min = (float)$parameter;
         return ($value < $min)
-            ? $this->formatMessage('min_value', $field, $parameter)
+            ? ['rule' => 'min_value', 'params' => explode(',', (string)$parameter)]
             : null;
     }
 
-    private function validateMaxValue(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateMaxValue(mixed $value, ?string $parameter, string $field): ?array
     {
         if (!is_numeric($value)) {
-            return $this->formatMessage('numeric', $field);
+            return ['rule' => 'numeric'];
         }
 
         $max = (float)$parameter;
         return ($value > $max)
-            ? $this->formatMessage('max_value', $field, $parameter)
+            ? ['rule' => 'max_value', 'params' => explode(',', (string)$parameter)]
             : null;
     }
 
-    private function validateIn(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateIn(mixed $value, ?string $parameter, string $field): ?array
     {
         if (!$parameter) {
-            return $this->formatMessage('in', $field, '');
+            return ['rule' => 'in'];
         }
 
         $allowedValues = explode(',', $parameter);
@@ -177,18 +193,21 @@ trait ValidationRules
         if (is_array($value)) {
             foreach ($value as $item) {
                 if (!in_array((string)$item, $allowedValues, true)) {
-                    return $this->formatMessage('in', $field, $parameter);
+                    return ['rule' => 'in', 'params' => explode(',', $parameter)];
                 }
             }
             return null;
         }
 
         return !in_array((string)$value, $allowedValues, true)
-            ? $this->formatMessage('in', $field, $parameter)
+            ? ['rule' => 'in', 'params' => explode(',', $parameter)]
             : null;
     }
 
-    private function validateBoolean(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateBoolean(mixed $value, ?string $parameter, string $field): ?array
     {
         if (is_bool($value)) {
             return null;
@@ -206,13 +225,16 @@ trait ValidationRules
             return null;
         }
 
-        return $this->formatMessage('boolean', $field);
+        return ['rule' => 'boolean'];
     }
 
-    private function validateDate(mixed $value, ?string $parameter, string $field): ?string
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateDate(mixed $value, ?string $parameter, string $field): ?array
     {
         if (!is_string($value) && !is_numeric($value)) {
-            return $this->formatMessage('date', $field);
+            return ['rule' => 'date'];
         }
 
         if ($parameter !== null) {
@@ -220,7 +242,7 @@ trait ValidationRules
 
             return ($parsed !== false && $parsed->format($parameter) === (string) $value)
                 ? null
-                : $this->formatMessage('date_format', $field, $parameter);
+                : ['rule' => 'date_format', 'params' => explode(',', $parameter)];
         }
 
         try {
@@ -228,7 +250,21 @@ trait ValidationRules
             new \DateTime($dateString);
             return null;
         } catch (\Exception) {
-            return $this->formatMessage('date', $field);
+            return ['rule' => 'date'];
         }
+    }
+
+    /**
+     * @return ?array{rule: string, params?: string[]}
+     */
+    private function validateUuid(mixed $value, ?string $parameter, string $field): ?array
+    {
+        if (!is_string($value)) {
+            return ['rule' => 'uuid'];
+        }
+
+        return preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $value)
+            ? null
+            : ['rule' => 'uuid'];
     }
 }

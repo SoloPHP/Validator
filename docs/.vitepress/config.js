@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Solo Validator',
-  description: 'Lightweight PHP validation library with custom rules and messages',
+  description: 'Lightweight PHP validation library with custom rules and structured errors',
   base: '/Validator/',
   
   head: [
@@ -10,7 +10,7 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#8b5cf6' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'Solo Validator' }],
-    ['meta', { property: 'og:description', content: 'Lightweight PHP validation library with custom rules and messages' }],
+    ['meta', { property: 'og:description', content: 'Lightweight PHP validation library with custom rules and structured errors' }],
   ],
 
   themeConfig: {
@@ -20,6 +20,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/installation' },
       { text: 'Rules', link: '/features/rules' },
       { text: 'API', link: '/api/validator' },
+      { text: 'v3.0.0', link: 'https://github.com/solophp/validator/releases' },
       {
         text: 'Links',
         items: [
@@ -42,8 +43,7 @@ export default defineConfig({
         text: 'Features',
         items: [
           { text: 'Validation Rules', link: '/features/rules' },
-          { text: 'Custom Rules', link: '/features/custom-rules' },
-          { text: 'Custom Messages', link: '/features/custom-messages' }
+          { text: 'Custom Rules', link: '/features/custom-rules' }
         ]
       },
       {

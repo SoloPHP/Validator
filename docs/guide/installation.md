@@ -22,7 +22,7 @@ The package has minimal dependencies:
     "require": {
         "php": "^8.1",
         "giggsey/libphonenumber-for-php-lite": "^8.13",
-        "solophp/contracts": "^1.0"
+        "solophp/contracts": "^2.0"
     }
 }
 ```
@@ -43,24 +43,13 @@ $errors = $validator->validate($data, $rules);
 
 // Check result
 if ($validator->fails()) {
-    // Handle errors
-    foreach ($validator->errors() as $field => $messages) {
-        echo "$field: " . implode(', ', $messages) . "\n";
+    // Errors are structured: ['field' => [['rule' => 'required'], ...]]
+    foreach ($validator->errors() as $field => $fieldErrors) {
+        foreach ($fieldErrors as $error) {
+            echo "$field: failed rule '{$error['rule']}'\n";
+        }
     }
 }
-```
-
-## With Custom Messages
-
-```php
-// Define global custom messages
-$messages = [
-    'required' => 'This field is required.',
-    'email' => 'Please provide a valid email.',
-];
-
-// Pass to constructor
-$validator = new Validator($messages);
 ```
 
 ## Next Steps

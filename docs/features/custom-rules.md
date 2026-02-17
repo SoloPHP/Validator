@@ -33,12 +33,11 @@ $validator->addCustomRule('even', function ($value, $param, $data) {
 });
 
 $rules = ['number' => 'even'];
-$messages = ['number.even' => 'The number must be even.'];
 
-$validator->validate(['number' => 3], $rules, $messages);
-// Error: The number must be even.
+$validator->validate(['number' => 3], $rules);
+// Error: [['rule' => 'even']]
 
-$validator->validate(['number' => 4], $rules, $messages);
+$validator->validate(['number' => 4], $rules);
 // Passes
 ```
 
@@ -48,16 +47,15 @@ $validator->validate(['number' => 4], $rules, $messages);
 $validator->addCustomRule('unique', function ($value, $param, $data) {
     // $param = "users,email" → table and column
     [$table, $column] = explode(',', $param);
-    
+
     global $db;
     $stmt = $db->prepare("SELECT COUNT(*) FROM {$table} WHERE {$column} = ?");
     $stmt->execute([$value]);
-    
+
     return $stmt->fetchColumn() === 0;
 });
 
 $rules = ['email' => 'required|email|unique:users,email'];
-$messages = ['email.unique' => 'This email is already registered.'];
 ```
 
 ### Confirmed (Password Confirmation)
@@ -71,15 +69,14 @@ $validator->addCustomRule('confirmed', function ($value, $param, $data) {
 $rules = [
     'password' => 'required|min:8|confirmed',
 ];
-$messages = ['password.confirmed' => 'Password confirmation does not match.'];
 
 $data = [
     'password' => 'secret123',
     'password_confirmation' => 'secret456',  // Doesn't match
 ];
 
-$validator->validate($data, $rules, $messages);
-// Error: Password confirmation does not match.
+$validator->validate($data, $rules);
+// Error: [['rule' => 'confirmed']]
 ```
 
 ### Strong Password
@@ -93,7 +90,6 @@ $validator->addCustomRule('strong_password', function ($value, $param, $data) {
 });
 
 $rules = ['password' => 'required|min:8|strong_password'];
-$messages = ['password.strong_password' => 'Password must contain uppercase, lowercase, and a number.'];
 ```
 
 ### Depends On Another Field
@@ -102,12 +98,12 @@ $messages = ['password.strong_password' => 'Password must contain uppercase, low
 $validator->addCustomRule('required_if', function ($value, $param, $data) {
     // $param = "field,expected_value"
     [$field, $expected] = explode(',', $param);
-    
+
     // Only required if other field has expected value
     if (($data[$field] ?? null) !== $expected) {
         return true;  // Not required, skip
     }
-    
+
     return $value !== null && $value !== '';
 });
 
@@ -117,7 +113,7 @@ $rules = [
 ];
 
 $data = ['payment_method' => 'card', 'card_number' => ''];
-// Error: card_number is required when payment_method is 'card'
+// Error on card_number: [['rule' => 'required_if', 'params' => ['payment_method', 'card']]]
 ```
 
 ---
@@ -133,10 +129,9 @@ $validator->addCustomRule('divisible_by', function ($value, $param, $data) {
 });
 
 $rules = ['quantity' => 'divisible_by:5'];
-$messages = ['quantity.divisible_by' => 'Quantity must be divisible by :param.'];
 
-$validator->validate(['quantity' => 17], $rules, $messages);
-// Error: Quantity must be divisible by 5.
+$validator->validate(['quantity' => 17], $rules);
+// Error: [['rule' => 'divisible_by', 'params' => ['5']]]
 ```
 
 ---
@@ -154,42 +149,39 @@ $rules = [
     'old_password' => 'required',
     'new_password' => 'required|min:8|different:old_password',
 ];
-$messages = ['new_password.different' => 'New password must be different from old password.'];
 ```
 
 ---
 
-## Reusable Validator Class
+## Reusable Validator Setup
 
-For complex applications, extend the validator:
+For complex applications, register rules in a factory or service:
 
 ```php
-class AppValidator extends Validator
+class ValidatorFactory
 {
-    public function __construct(array $messages = [])
+    public static function create(): Validator
     {
-        parent::__construct($messages);
-        $this->registerCustomRules();
+        $validator = new Validator();
+
+        $validator->addCustomRule('unique', [self::class, 'validateUnique']);
+        $validator->addCustomRule('exists', [self::class, 'validateExists']);
+        $validator->addCustomRule('confirmed', [self::class, 'validateConfirmed']);
+
+        return $validator;
     }
-    
-    private function registerCustomRules(): void
-    {
-        $this->addCustomRule('unique', [$this, 'validateUnique']);
-        $this->addCustomRule('exists', [$this, 'validateExists']);
-        $this->addCustomRule('confirmed', [$this, 'validateConfirmed']);
-    }
-    
-    private function validateUnique($value, $param, $data): bool
+
+    private static function validateUnique($value, $param, $data): bool
     {
         // Implementation
     }
-    
-    private function validateExists($value, $param, $data): bool
+
+    private static function validateExists($value, $param, $data): bool
     {
         // Implementation
     }
-    
-    private function validateConfirmed($value, $param, $data): bool
+
+    private static function validateConfirmed($value, $param, $data): bool
     {
         $confirmField = $param ?: array_key_first($data) . '_confirmation';
         return $value === ($data[$confirmField] ?? null);
