@@ -10,23 +10,14 @@ final class Validator implements ValidatorInterface
 {
     use ValidationRules;
 
-    /** @var array<string, list<string>> */
+    /** @var array<string, list<array{rule: string, params?: string[]}>> */
     private array $errors = [];
     /** @var array<string, callable> */
     private array $customRules = [];
-    /** @var array<string, string> */
-    private array $messages = [];
 
-    /** @param array<string, string> $messages */
-    public function __construct(array $messages = [])
-    {
-        $this->messages = array_merge($this->defaultMessages, $messages);
-    }
-
-    public function validate(array $data, array $rules, array $messages = []): array
+    public function validate(array $data, array $rules): array
     {
         $this->errors = [];
-        $messages = array_merge($this->messages, $messages);
 
         foreach ($rules as $field => $ruleSet) {
             $rulesArray = explode('|', $ruleSet);
@@ -42,19 +33,16 @@ final class Validator implements ValidatorInterface
                 if (isset($this->customRules[$ruleName])) {
                     $isValid = call_user_func($this->customRules[$ruleName], $value, $parameter, $data);
                     if (!$isValid) {
-                        $this->addError($field, $this->getErrorMessage($field, $ruleName, $messages, '', $parameter));
+                        $error = ['rule' => $ruleName];
+                        if ($parameter !== null) {
+                            $error['params'] = explode(',', $parameter);
+                        }
+                        $this->errors[$field][] = $error;
                     }
                 } else {
-                    $message = $this->applyValidation($ruleName, $value, $parameter, $field);
-                    if ($message) {
-                        $errorMessage = $this->getErrorMessage(
-                            $field,
-                            $ruleName,
-                            $messages,
-                            $message,
-                            $parameter
-                        );
-                        $this->addError($field, $errorMessage);
+                    $error = $this->applyValidation($ruleName, $value, $parameter, $field);
+                    if ($error !== null) {
+                        $this->errors[$field][] = $error;
                     }
                 }
             }
@@ -73,7 +61,7 @@ final class Validator implements ValidatorInterface
         return !empty($this->errors);
     }
 
-    /** @return array<string, list<string>> */
+    /** @return array<string, list<array{rule: string, params?: string[]}>> */
     public function errors(): array
     {
         return $this->errors;
@@ -85,30 +73,9 @@ final class Validator implements ValidatorInterface
     }
 
     /**
-     * @param array<string, string> $messages
+     * @return ?array{rule: string, params?: string[]}
      */
-    private function getErrorMessage(
-        string $field,
-        string $rule,
-        array $messages,
-        string $default = '',
-        ?string $parameter = null
-    ): string {
-        // Priority: field.rule > rule > default > fallback
-        $message = $messages["{$field}.{$rule}"]
-            ?? $messages[$rule]
-            ?? $default
-            ?: sprintf('The %s field failed the %s validation.', $field, $rule);
-
-        return str_replace([':field', ':param'], [$field, $parameter ?? ''], $message);
-    }
-
-    private function addError(string $field, string $message): void
-    {
-        $this->errors[$field][] = $message;
-    }
-
-    private function applyValidation(string $rule, mixed $value, ?string $parameter, string $field): ?string
+    private function applyValidation(string $rule, mixed $value, ?string $parameter, string $field): ?array
     {
         $method = $this->getValidationMethodName($rule);
         if (method_exists($this, $method)) {

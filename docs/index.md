@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Solo Validator
   text: PHP Validation Library
-  tagline: Lightweight, flexible validation with custom rules and messages.
+  tagline: Lightweight, flexible validation with custom rules and structured errors.
   image:
     src: /logo.svg
     alt: Solo Validator
@@ -19,13 +19,13 @@ hero:
 features:
   - icon: ✅
     title: Built-in Rules
-    details: Required, email, phone, min, max, length, numeric, date, and more.
+    details: Required, email, phone, uuid, min, max, length, numeric, date, and more.
   - icon: 🔧
     title: Custom Rules
     details: Extend validation with your own rules via simple callbacks.
-  - icon: 💬
-    title: Custom Messages
-    details: Override messages globally or per-field with placeholder support.
+  - icon: 📦
+    title: Structured Errors
+    details: Get machine-readable error objects with rule names and parameters.
   - icon: 🎯
     title: Parameterized Rules
     details: Define rules with parameters like min:8, max:100, in:a,b,c.
@@ -73,6 +73,7 @@ $rules = [
 $errors = $validator->validate($data, $rules);
 
 if ($validator->fails()) {
+    // Structured errors: ['field' => [['rule' => 'email'], ...]]
     print_r($validator->errors());
 } else {
     echo "Validation passed!";

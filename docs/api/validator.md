@@ -11,28 +11,15 @@ $validator = new Validator();
 ## Constructor
 
 ```php
-public function __construct(array $messages = [])
+public function __construct()
 ```
 
-Create a new Validator instance with optional global messages.
-
-**Parameters:**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `$messages` | `array<string, string>` | `[]` | Global custom messages |
+Create a new Validator instance.
 
 **Example:**
 
 ```php
-// Default messages
 $validator = new Validator();
-
-// With custom messages
-$validator = new Validator([
-    'required' => 'This field is required.',
-    'email' => 'Please enter a valid email.',
-]);
 ```
 
 ---
@@ -40,7 +27,7 @@ $validator = new Validator([
 ## validate()
 
 ```php
-public function validate(array $data, array $rules, array $messages = []): array
+public function validate(array $data, array $rules): array
 ```
 
 Validate data against rules.
@@ -49,11 +36,10 @@ Validate data against rules.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `$data` | `array` | Data to validate |
+| `$data` | `array<string, mixed>` | Data to validate |
 | `$rules` | `array<string, string>` | Validation rules |
-| `$messages` | `array<string, string>` | Per-validation messages |
 
-**Returns:** `array<string, list<string>>` — Errors by field
+**Returns:** `array<string, list<array{rule: string, params?: string[]}>>` — Structured errors by field
 
 **Example:**
 
@@ -68,15 +54,15 @@ $rules = [
     'password' => 'required|min:8',
 ];
 
-$messages = [
-    'email.email' => 'Please provide a valid email.',
-];
-
-$errors = $validator->validate($data, $rules, $messages);
+$errors = $validator->validate($data, $rules);
 
 // [
-//     'email' => ['Please provide a valid email.'],
-//     'password' => ['The password must be at least 8.'], // :param replaced with rule value
+//     'email' => [
+//         ['rule' => 'email'],
+//     ],
+//     'password' => [
+//         ['rule' => 'min', 'params' => ['8']],
+//     ],
 // ]
 ```
 
@@ -130,15 +116,20 @@ public function errors(): array
 
 Get all validation errors.
 
-**Returns:** `array<string, list<string>>` — Errors grouped by field
+**Returns:** `array<string, list<array{rule: string, params?: string[]}>>` — Errors grouped by field
 
 ```php
 $validator->validate($data, $rules);
 $errors = $validator->errors();
 
 // [
-//     'email' => ['Error 1', 'Error 2'],
-//     'password' => ['Error 1'],
+//     'email' => [
+//         ['rule' => 'required'],
+//         ['rule' => 'email'],
+//     ],
+//     'password' => [
+//         ['rule' => 'min', 'params' => ['8']],
+//     ],
 // ]
 ```
 
@@ -203,10 +194,12 @@ The Validator implements `Solo\Contracts\Validator\ValidatorInterface`:
 ```php
 interface ValidatorInterface
 {
-    public function validate(array $data, array $rules, array $messages = []): array;
-    public function fails(): bool;
-    public function passed(): bool;
-    public function errors(): array;
+    /**
+     * @param array<string, mixed> $data
+     * @param array<string, string> $rules
+     * @return array<string, list<array{rule: string, params?: string[]}>>
+     */
+    public function validate(array $data, array $rules): array;
 }
 ```
 
@@ -220,19 +213,17 @@ use Solo\Validator\Validator;
 class UserController
 {
     private Validator $validator;
-    
+
     public function __construct()
     {
-        $this->validator = new Validator([
-            'required' => 'This field is required.',
-        ]);
-        
+        $this->validator = new Validator();
+
         // Register custom rules
         $this->validator->addCustomRule('unique_email', function ($value, $param, $data) {
             return !User::where('email', $value)->exists();
         });
     }
-    
+
     public function register(array $data): array
     {
         $rules = [
@@ -241,23 +232,18 @@ class UserController
             'password' => 'required|min:8',
             'age' => 'nullable|integer|min_value:18',
         ];
-        
-        $messages = [
-            'email.unique_email' => 'This email is already registered.',
-            'password.min' => 'Password must be at least :param characters.',
-        ];
-        
-        $this->validator->validate($data, $rules, $messages);
-        
+
+        $this->validator->validate($data, $rules);
+
         if ($this->validator->fails()) {
             return [
                 'success' => false,
                 'errors' => $this->validator->errors(),
             ];
         }
-        
+
         // Create user...
-        
+
         return ['success' => true];
     }
 }

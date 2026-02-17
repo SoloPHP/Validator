@@ -397,13 +397,8 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
-    public function testCustomMessages(): void
+    public function testErrorsReturnStructuredFormat(): void
     {
-        $messages = [
-            'email.email' => 'Please provide a valid email address.',
-            'password.min' => 'Password must be at least 8 characters long.'
-        ];
-
         $data = [
             'email' => 'invalid-email',
             'password' => '123'
@@ -413,11 +408,11 @@ class ValidatorTest extends TestCase
             'password' => 'min:8'
         ];
 
-        $errors = $this->validator->validate($data, $rules, $messages);
+        $errors = $this->validator->validate($data, $rules);
 
         $this->assertTrue($this->validator->fails());
-        $this->assertContains('Please provide a valid email address.', $errors['email']);
-        $this->assertContains('Password must be at least 8 characters long.', $errors['password']);
+        $this->assertSame([['rule' => 'email']], $errors['email']);
+        $this->assertSame([['rule' => 'min', 'params' => ['8']]], $errors['password']);
     }
 
     public function testInValidation(): void
@@ -519,73 +514,67 @@ class ValidatorTest extends TestCase
         $this->assertEmpty($errors);
     }
 
-    public function testGlobalCustomMessages(): void
+    public function testErrorsReturnStructuredFormatWithParams(): void
     {
-        $messages = [
-            'required' => 'This field is required.',
-            'email' => 'Please provide a valid email address.'
-        ];
-
-        $validator = new Validator($messages);
-
-        $data = ['email' => 'invalid-email'];
-        $rules = ['email' => 'required|email'];
-
-        $errors = $validator->validate($data, $rules);
-
-        $this->assertTrue($validator->fails());
-        $this->assertContains('Please provide a valid email address.', $errors['email']);
-    }
-
-    public function testPlaceholderSubstitutionInDefaultMessages(): void
-    {
-        $data = ['username' => 'ab'];
-        $rules = ['username' => 'min:3'];
+        $data = ['status' => 'pending'];
+        $rules = ['status' => 'in:active,inactive'];
 
         $errors = $this->validator->validate($data, $rules);
 
         $this->assertTrue($this->validator->fails());
-        $this->assertContains('The username must be at least 3.', $errors['username']);
+        $this->assertSame([['rule' => 'in', 'params' => ['active', 'inactive']]], $errors['status']);
     }
 
-    public function testPlaceholderSubstitutionInCustomMessages(): void
+    public function testErrorsReturnStructuredFormatWithoutParams(): void
     {
-        $data = ['password' => '12345'];
-        $rules = ['password' => 'min:8'];
-        $messages = ['min' => 'The :field field must have at least :param characters.'];
+        $data = ['name' => ''];
+        $rules = ['name' => 'required'];
 
-        $errors = $this->validator->validate($data, $rules, $messages);
+        $errors = $this->validator->validate($data, $rules);
 
         $this->assertTrue($this->validator->fails());
-        $this->assertContains('The password field must have at least 8 characters.', $errors['password']);
+        $this->assertSame([['rule' => 'required']], $errors['name']);
     }
 
-    public function testPlaceholderSubstitutionInFieldSpecificMessages(): void
+    public function testMultipleErrorsPerField(): void
     {
-        $data = ['email' => 'test'];
-        $rules = ['email' => 'min:5'];
-        $messages = ['email.min' => 'Email must be at least :param characters long.'];
+        $data = ['age' => 'abc'];
+        $rules = ['age' => 'integer|min_value:18'];
 
-        $errors = $this->validator->validate($data, $rules, $messages);
+        $errors = $this->validator->validate($data, $rules);
 
         $this->assertTrue($this->validator->fails());
-        $this->assertContains('Email must be at least 5 characters long.', $errors['email']);
+        $this->assertCount(2, $errors['age']);
+        $this->assertSame('integer', $errors['age'][0]['rule']);
+        $this->assertSame('numeric', $errors['age'][1]['rule']);
     }
 
-    public function testPlaceholderSubstitutionInGlobalMessages(): void
+    public function testCustomRuleErrorStructuredFormat(): void
     {
-        $messages = [
-            'max' => 'The :field cannot exceed :param characters.'
-        ];
-        $validator = new Validator($messages);
+        $this->validator->addCustomRule('even', function ($value) {
+            return (int)$value % 2 === 0;
+        });
 
-        $data = ['title' => 'This is a very long title that exceeds limit'];
-        $rules = ['title' => 'max:20'];
+        $data = ['number' => 3];
+        $rules = ['number' => 'even'];
 
-        $errors = $validator->validate($data, $rules);
+        $errors = $this->validator->validate($data, $rules);
 
-        $this->assertTrue($validator->fails());
-        $this->assertContains('The title cannot exceed 20 characters.', $errors['title']);
+        $this->assertSame([['rule' => 'even']], $errors['number']);
+    }
+
+    public function testCustomRuleWithParamErrorStructuredFormat(): void
+    {
+        $this->validator->addCustomRule('divisible', function ($value, $param) {
+            return (int)$value % (int)$param === 0;
+        });
+
+        $data = ['number' => 7];
+        $rules = ['number' => 'divisible:3'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertSame([['rule' => 'divisible', 'params' => ['3']]], $errors['number']);
     }
 
     public function testDateValidation(): void
@@ -741,5 +730,49 @@ class ValidatorTest extends TestCase
 
         $this->assertTrue($this->validator->passed());
         $this->assertEmpty($errors);
+    }
+
+    public function testUuidValidation(): void
+    {
+        $data = ['id' => 'not-a-uuid'];
+        $rules = ['id' => 'uuid'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertSame([['rule' => 'uuid']], $errors['id']);
+    }
+
+    public function testUuidValidationPasses(): void
+    {
+        $data = ['id' => '550e8400-e29b-41d4-a716-446655440000'];
+        $rules = ['id' => 'uuid'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testUuidValidationWithUppercase(): void
+    {
+        $data = ['id' => '550E8400-E29B-41D4-A716-446655440000'];
+        $rules = ['id' => 'uuid'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testUuidValidationWithNonString(): void
+    {
+        $data = ['id' => 12345];
+        $rules = ['id' => 'uuid'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertSame([['rule' => 'uuid']], $errors['id']);
     }
 }

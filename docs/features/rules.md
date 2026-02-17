@@ -144,6 +144,20 @@ $data = ['timestamp' => 1705334400];
 $rules = ['timestamp' => 'date'];  // Valid
 ```
 
+### uuid
+
+Field must be a valid UUID (v1-v5).
+
+```php
+$rules = ['id' => 'uuid'];
+
+// Valid
+$data = ['id' => '550e8400-e29b-41d4-a716-446655440000'];
+
+// Invalid
+$data = ['id' => 'not-a-uuid'];
+```
+
 ---
 
 ## Type Rules
@@ -247,6 +261,7 @@ $data = ['middle_name' => 'James'];
 | `email` | — | Must be valid email |
 | `phone` | `region` (optional) | Must be valid phone |
 | `date` | `format` (optional) | Must be valid date |
+| `uuid` | — | Must be valid UUID |
 | `min` | `length` | Minimum string length |
 | `max` | `length` | Maximum string length |
 | `length` | `length` | Exact string length |
@@ -266,13 +281,13 @@ Rules are processed left to right:
 $rules = [
     // Required, then validate format
     'email' => 'required|email',
-    
+
     // Required, then check length
     'password' => 'required|min:8|max:100',
-    
+
     // Required, numeric, then range
     'age' => 'required|integer|min_value:18|max_value:120',
-    
+
     // Optional, but if present must be valid
     'website' => 'nullable|regex:/^https?:\/\//',
 ];

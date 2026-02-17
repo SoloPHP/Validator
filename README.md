@@ -1,6 +1,6 @@
 # Solo Validator
 
-Lightweight PHP validation library with custom rules and messages.
+Lightweight PHP validation library with custom rules and structured errors.
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/solophp/validator.svg)](https://packagist.org/packages/solophp/validator)
 [![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-8892BF.svg)](https://php.net/)
@@ -8,9 +8,9 @@ Lightweight PHP validation library with custom rules and messages.
 
 ## Features
 
-- **Built-in Rules** — Required, email, phone, min, max, length, numeric, date, and more
+- **Built-in Rules** — Required, email, phone, uuid, min, max, length, numeric, date, and more
 - **Custom Rules** — Extend validation with your own rules via callbacks
-- **Custom Messages** — Override messages globally or per-field with placeholders
+- **Structured Errors** — Machine-readable error objects with rule names and parameters
 - **Parameterized Rules** — Define rules like `min:8`, `max:100`, `in:a,b,c`
 - **Phone Validation** — International phone validation via libphonenumber
 - **Lightweight** — Minimal dependencies, PSR-4 compliant
@@ -44,6 +44,12 @@ $errors = $validator->validate($data, $rules);
 
 if ($validator->fails()) {
     print_r($validator->errors());
+    // [
+    //     'field' => [
+    //         ['rule' => 'email'],
+    //         ['rule' => 'min', 'params' => ['3']],
+    //     ],
+    // ]
 } else {
     echo "Validation passed!";
 }
@@ -57,7 +63,6 @@ if ($validator->fails()) {
 - [Quick Start](https://solophp.github.io/Validator/guide/quick-start)
 - [Validation Rules](https://solophp.github.io/Validator/features/rules)
 - [Custom Rules](https://solophp.github.io/Validator/features/custom-rules)
-- [Custom Messages](https://solophp.github.io/Validator/features/custom-messages)
 - [API Reference](https://solophp.github.io/Validator/api/validator)
 
 ## Requirements

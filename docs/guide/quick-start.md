@@ -51,9 +51,7 @@ $validator->validate($data, $rules);
 
 // Check if validation failed
 if ($validator->fails()) {
-    // Get all errors
     $errors = $validator->errors();
-    // ['email' => ['The email must be a valid email address.']]
 }
 
 // Check if validation passed
@@ -64,19 +62,27 @@ if ($validator->passed()) {
 
 ## Error Structure
 
-Errors are returned as an associative array:
+Errors are returned as structured arrays with rule name and optional parameters:
 
 ```php
 [
-    'field_name' => [
-        'Error message 1',
-        'Error message 2',
+    'email' => [
+        ['rule' => 'email'],
     ],
-    'another_field' => [
-        'Error message',
+    'password' => [
+        ['rule' => 'min', 'params' => ['8']],
+    ],
+    'status' => [
+        ['rule' => 'in', 'params' => ['active', 'inactive', 'pending']],
     ],
 ]
 ```
+
+Each error contains:
+- `rule` — the name of the failed validation rule
+- `params` — (optional) array of rule parameters
+
+This format is ideal for building custom error messages on the client side or for i18n/l10n.
 
 ---
 
@@ -94,17 +100,12 @@ $rules = [
     'terms' => 'required|boolean',
 ];
 
-$messages = [
-    'name.required' => 'Please enter your name.',
-    'email.email' => 'Please provide a valid email address.',
-    'terms.required' => 'You must accept the terms.',
-];
-
-$errors = $validator->validate($data, $rules, $messages);
+$errors = $validator->validate($data, $rules);
 
 if ($validator->fails()) {
-    // Return errors to form
-    return response()->json(['errors' => $errors], 422);
+    http_response_code(422);
+    echo json_encode(['errors' => $errors]);
+    exit;
 }
 
 // Process valid data
@@ -121,6 +122,7 @@ $rules = [
     'status' => 'required|in:draft,published,archived',
     'tags' => 'array',
     'metadata' => 'nullable|array:author,source',
+    'id' => 'nullable|uuid',
 ];
 
 $errors = $validator->validate($data, $rules);
@@ -151,4 +153,3 @@ $data = ['bio' => 'Hello!', 'website' => 'https://example.com'];
 
 - [Validation Rules](/features/rules) — Complete rules reference
 - [Custom Rules](/features/custom-rules) — Create your own rules
-- [Custom Messages](/features/custom-messages) — Customize error messages
