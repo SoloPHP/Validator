@@ -50,7 +50,7 @@ trait ValidationRules
      */
     private function validateLength(mixed $value, ?string $parameter, string $field): ?array
     {
-        return (isset($parameter) && strlen((string)$value) !== (int)$parameter)
+        return (isset($parameter) && mb_strlen((string)$value) !== (int)$parameter)
             ? ['rule' => 'length', 'params' => explode(',', $parameter)]
             : null;
     }
@@ -60,7 +60,7 @@ trait ValidationRules
      */
     private function validateMin(mixed $value, ?string $parameter, string $field): ?array
     {
-        return (isset($parameter) && strlen((string)$value) < (int)$parameter)
+        return (isset($parameter) && mb_strlen((string)$value) < (int)$parameter)
             ? ['rule' => 'min', 'params' => explode(',', $parameter)]
             : null;
     }
@@ -70,7 +70,7 @@ trait ValidationRules
      */
     private function validateMax(mixed $value, ?string $parameter, string $field): ?array
     {
-        return (isset($parameter) && strlen((string)$value) > (int)$parameter)
+        return (isset($parameter) && mb_strlen((string)$value) > (int)$parameter)
             ? ['rule' => 'max', 'params' => explode(',', $parameter)]
             : null;
     }
