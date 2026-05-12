@@ -187,6 +187,56 @@ $rules = [
 
 ---
 
+## addRule()
+
+```php
+public function addRule(string $name, RuleInterface $rule): void
+```
+
+Register a rule implementing `Solo\Validator\RuleInterface`. Unlike `addCustomRule()` (callable returning bool), a `RuleInterface` rule returns the error structure directly — full control over `rule` name and `params`.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$name` | `string` | Rule name |
+| `$rule` | `RuleInterface` | Rule instance |
+
+**RuleInterface contract:**
+
+```php
+namespace Solo\Validator;
+
+interface RuleInterface
+{
+    /**
+     * @param array<string, mixed> $data Full payload (for cross-field rules)
+     * @return array{rule: string, params?: string[]}|null Null = pass; array = error
+     */
+    public function validate(mixed $value, ?string $parameter, array $data = []): ?array;
+}
+```
+
+**Example:**
+
+```php
+use Solo\Validator\RuleInterface;
+
+final class EvenRule implements RuleInterface
+{
+    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    {
+        return ((int)$value) % 2 === 0 ? null : ['rule' => 'even'];
+    }
+}
+
+$validator->addRule('even', new EvenRule());
+```
+
+Use `addRule()` when a rule needs constructor dependencies (database, cache, services) or when the error shape should differ from the simple `[rule, exploded params]` wrapping that `addCustomRule()` produces. For quick inline checks, `addCustomRule()` with a closure is more concise.
+
+---
+
 ## ValidatorInterface
 
 The Validator implements `Solo\Contracts\Validator\ValidatorInterface`:

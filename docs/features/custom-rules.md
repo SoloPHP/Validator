@@ -153,6 +153,91 @@ $rules = [
 
 ---
 
+## Class-Based Rules (RuleInterface)
+
+For rules with constructor dependencies, complex state, or custom error shapes, implement `Solo\Validator\RuleInterface` instead of using a closure. Register with `addRule()`:
+
+```php
+use Solo\Validator\RuleInterface;
+
+final class EvenRule implements RuleInterface
+{
+    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    {
+        return ((int)$value) % 2 === 0 ? null : ['rule' => 'even'];
+    }
+}
+
+$validator->addRule('even', new EvenRule());
+```
+
+The rule returns the full error structure (`['rule' => '...', 'params' => [...]]`) or `null` to pass — Validator does not wrap it.
+
+### With Constructor Dependencies
+
+```php
+use Doctrine\DBAL\Connection;
+use Solo\Validator\RuleInterface;
+
+final class UniqueRule implements RuleInterface
+{
+    public function __construct(private readonly Connection $db) {}
+
+    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    {
+        [$table, $column] = explode(',', $parameter ?? '');
+
+        $exists = (bool) $this->db->createQueryBuilder()
+            ->select('1')
+            ->from($this->db->quoteIdentifier($table))
+            ->where($this->db->quoteIdentifier($column) . ' = :value')
+            ->setParameter('value', $value)
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchOne();
+
+        // Error omits `params`: table/column names are internal schema.
+        return $exists ? ['rule' => 'unique'] : null;
+    }
+}
+
+$validator->addRule('unique', new UniqueRule($db));
+
+$rules = ['email' => 'required|email|unique:users,email'];
+```
+
+### Custom Error Variants
+
+The rule chooses what to return — useful when a single rule has distinct failure modes:
+
+```php
+final class PasswordStrengthRule implements RuleInterface
+{
+    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    {
+        if (!is_string($value) || strlen($value) < 8) {
+            return ['rule' => 'password_strength', 'params' => ['too_short']];
+        }
+        if (!preg_match('/[A-Z]/', $value) || !preg_match('/[0-9]/', $value)) {
+            return ['rule' => 'password_strength', 'params' => ['weak']];
+        }
+        return null;
+    }
+}
+```
+
+### addCustomRule() vs addRule()
+
+| | `addCustomRule()` | `addRule()` |
+|---|---|---|
+| Signature | `callable(mixed, ?string, array): bool` | `RuleInterface::validate(): ?array` |
+| Error shape | Wrapped by Validator: `['rule' => name, 'params' => exploded $parameter]` | Returned by the rule itself |
+| Best for | Quick closures, simple checks | DI-backed rules, custom error shapes |
+
+Both can be mixed in the same validator — pick per rule.
+
+---
+
 ## Reusable Validator Setup
 
 For complex applications, register rules in a factory or service:
