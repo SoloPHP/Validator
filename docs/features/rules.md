@@ -30,18 +30,24 @@ $rules = ['title' => 'string'];
 
 ### min
 
-Field must have at least X characters.
+Field must have at least X characters, or — when the value is an array — at least X elements.
 
 ```php
-$rules = ['password' => 'min:8'];
+$rules = [
+    'password' => 'min:8',   // string: at least 8 chars
+    'tags' => 'min:1',       // array: at least 1 element
+];
 ```
 
 ### max
 
-Field must not exceed X characters.
+Field must not exceed X characters, or — when the value is an array — must not contain more than X elements.
 
 ```php
-$rules = ['username' => 'max:20'];
+$rules = [
+    'username' => 'max:20',  // string: at most 20 chars
+    'tags' => 'max:5',       // array: at most 5 elements
+];
 ```
 
 ### length
@@ -262,8 +268,8 @@ $data = ['middle_name' => 'James'];
 | `phone` | `region` (optional) | Must be valid phone |
 | `date` | `format` (optional) | Must be valid date |
 | `uuid` | — | Must be valid UUID |
-| `min` | `length` | Minimum string length |
-| `max` | `length` | Maximum string length |
+| `min` | `length` | Minimum string length or array element count |
+| `max` | `length` | Maximum string length or array element count |
 | `length` | `length` | Exact string length |
 | `min_value` | `value` | Minimum numeric value |
 | `max_value` | `value` | Maximum numeric value |
