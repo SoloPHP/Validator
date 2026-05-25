@@ -22,7 +22,7 @@ The package has minimal dependencies:
     "require": {
         "php": "^8.1",
         "giggsey/libphonenumber-for-php-lite": "^8.13",
-        "solophp/contracts": "^2.0"
+        "solophp/contracts": "^1.3"
     }
 }
 ```
