@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Solo\Validator\Rules;
 
+use Solo\Validator\PresenceRule;
 use Solo\Validator\RuleInterface;
 
-final class RequiredRule implements RuleInterface
+final class RequiredRule implements RuleInterface, PresenceRule
 {
     public function validate(mixed $value, ?string $parameter, array $data = []): ?array
     {

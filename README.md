@@ -9,7 +9,7 @@ Lightweight PHP validation library with custom rules and structured errors.
 ## Features
 
 - **Built-in Rules** — Required, email, phone, uuid, min, max, length, numeric, date, and more
-- **Custom Rules** — Extend validation with your own rules via callbacks
+- **Custom Rules** — Extend validation with your own rules via callbacks or classes
 - **Structured Errors** — Machine-readable error objects with rule names and parameters
 - **Parameterized Rules** — Define rules like `min:8`, `max:100`, `in:a,b,c`
 - **Phone Validation** — International phone validation via libphonenumber

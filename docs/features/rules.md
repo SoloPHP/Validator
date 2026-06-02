@@ -238,7 +238,7 @@ $data = ['tags' => ['php', 'ruby']];
 
 ### nullable
 
-Field can be null or empty. Skips all other rules if empty.
+Marks a field as optional. When the value is **blank** — `null`, an empty string `''`, or an empty array `[]` — every other rule on that field is skipped, so blank input passes.
 
 ```php
 $rules = [
@@ -246,10 +246,15 @@ $rules = [
     'website' => 'nullable|regex:/^https?:\/\//',
 ];
 
-// Both valid:
-$data = ['middle_name' => null];
-$data = ['middle_name' => 'James'];
+// All valid:
+$data = ['middle_name' => null];      // absent / null
+$data = ['middle_name' => ''];        // empty string
+$data = ['middle_name' => 'James'];   // present and validated
 ```
+
+Only blank values are skipped. Non-blank "falsy" values such as `'0'`, `0`, or `false` are **not** treated as blank and are still validated by the remaining rules.
+
+The presence rules `required` and `filled` are the exception — they always run, even alongside `nullable`, since their whole job is to assert presence. Combining them with `nullable` is contradictory (`required|nullable` still fails on a blank value). Any custom rule that needs to run on blank values can opt in by implementing [`PresenceRule`](/features/custom-rules#presence-rules-presencerule).
 
 ---
 
@@ -275,7 +280,7 @@ $data = ['middle_name' => 'James'];
 | `max_value` | `value` | Maximum numeric value |
 | `in` | `values` | Must be in list |
 | `regex` | `pattern` | Must match pattern |
-| `nullable` | — | Allow null/empty |
+| `nullable` | — | Allow blank (null / `''` / `[]`); skips other rules |
 
 ---
 
@@ -300,5 +305,5 @@ $rules = [
 ```
 
 ::: tip
-Place `nullable` first to skip validation for empty values.
+`nullable` applies to the whole field regardless of its position in the chain, but placing it first reads best. It skips the remaining rules only when the value is blank (`null`, `''`, or `[]`); `required` and `filled` still run.
 :::

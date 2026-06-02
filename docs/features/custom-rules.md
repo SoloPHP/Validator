@@ -226,6 +226,42 @@ final class PasswordStrengthRule implements RuleInterface
 }
 ```
 
+### Presence Rules (PresenceRule)
+
+When a field is marked `nullable`, the validator skips every rule for a **blank** value (`null`, `''`, or `[]`). Rules whose job is to assert presence must run *anyway* — otherwise `required` would be silently disabled by `nullable`. They opt out of the skip by implementing the marker interface `Solo\Validator\PresenceRule`:
+
+```php
+namespace Solo\Validator;
+
+interface PresenceRule
+{
+}
+```
+
+The built-in `required` and `filled` rules implement it. Implement it on your own rule when it must still run on blank values of a nullable field:
+
+```php
+use Solo\Validator\PresenceRule;
+use Solo\Validator\RuleInterface;
+
+final class RequiredWithRule implements RuleInterface, PresenceRule
+{
+    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    {
+        // Runs even when $value is blank, because of PresenceRule.
+        $blankOther = ($data[$parameter] ?? null) === null;
+        if (!$blankOther && ($value === null || $value === '')) {
+            return ['rule' => 'required_with', 'params' => [(string)$parameter]];
+        }
+        return null;
+    }
+}
+
+$validator->addRule('required_with', new RequiredWithRule());
+```
+
+Without `PresenceRule`, a rule registered via `addRule()` (or a callable via `addCustomRule()`) is skipped for blank values whenever the field also has `nullable` — which is the desired behavior for format/range checks like `email`, `min`, or `regex`.
+
 ### addCustomRule() vs addRule()
 
 | | `addCustomRule()` | `addRule()` |
