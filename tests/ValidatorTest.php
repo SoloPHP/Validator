@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Solo\Validator\Tests;
 
 use PHPUnit\Framework\TestCase;
+use Solo\Validator\PresenceRule;
+use Solo\Validator\RuleInterface;
 use Solo\Validator\Validator;
 
 class ValidatorTest extends TestCase
@@ -342,6 +344,111 @@ class ValidatorTest extends TestCase
 
         $errors = $this->validator->validate($data, $rules);
 
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testNullableSkipsRulesForEmptyString(): void
+    {
+        $data = ['website' => ''];
+        $rules = ['website' => 'nullable|regex:/^https?:\/\//'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testNullableSkipsRulesForEmptyArray(): void
+    {
+        $data = ['tags' => []];
+        $rules = ['tags' => 'nullable|in:php,js'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testNullableSkipsCustomCallableRule(): void
+    {
+        $this->validator->addCustomRule('even', fn ($value) => (int)$value % 2 === 0);
+
+        $data = ['number' => ''];
+        $rules = ['number' => 'nullable|even'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testNullableDoesNotSkipNonBlankFalsyValue(): void
+    {
+        $data = ['code' => '0'];
+        $rules = ['code' => 'nullable|min:5'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertSame([['rule' => 'min', 'params' => ['5']]], $errors['code']);
+    }
+
+    public function testNullableDoesNotSkipRequired(): void
+    {
+        $data = ['name' => null];
+        $rules = ['name' => 'required|nullable'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertSame([['rule' => 'required']], $errors['name']);
+    }
+
+    public function testNullableDoesNotSkipFilled(): void
+    {
+        $data = ['description' => ''];
+        $rules = ['description' => 'filled|nullable'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->fails());
+        $this->assertSame([['rule' => 'filled']], $errors['description']);
+    }
+
+    /**
+     * The reason PresenceRule exists: a custom conditional rule (here a minimal
+     * `required_if`) must still run on a blank value of a nullable field, where
+     * `nullable|required_if` is a meaningful, non-contradictory combination.
+     */
+    public function testNullableRunsCustomPresenceRule(): void
+    {
+        $requiredIf = new class implements RuleInterface, PresenceRule {
+            public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+            {
+                [$field, $expected] = explode(',', (string)$parameter);
+                $isRequired = (string)($data[$field] ?? '') === $expected;
+                if ($isRequired && ($value === null || $value === '')) {
+                    return ['rule' => 'required_if', 'params' => [$field, $expected]];
+                }
+                return null;
+            }
+        };
+        $this->validator->addRule('required_if', $requiredIf);
+
+        // x=1 → password is required even though it is blank and nullable.
+        $errors = $this->validator->validate(
+            ['x' => '1', 'password' => ''],
+            ['password' => 'nullable|required_if:x,1']
+        );
+        $this->assertTrue($this->validator->fails());
+        $this->assertSame([['rule' => 'required_if', 'params' => ['x', '1']]], $errors['password']);
+
+        // x=0 → not required → blank value is skipped by nullable and passes.
+        $errors = $this->validator->validate(
+            ['x' => '0', 'password' => ''],
+            ['password' => 'nullable|required_if:x,1']
+        );
         $this->assertTrue($this->validator->passed());
         $this->assertEmpty($errors);
     }

@@ -55,16 +55,18 @@ final class Validator implements ValidatorInterface
         foreach ($rules as $field => $ruleSet) {
             $rulesArray = explode('|', $ruleSet);
             $value = $data[$field] ?? null;
-
-            if ($value === null && in_array('nullable', $rulesArray, true)) {
-                continue;
-            }
+            $blank = $value === null || $value === '' || $value === [];
+            $nullable = in_array('nullable', $rulesArray, true);
 
             foreach ($rulesArray as $rule) {
                 [$ruleName, $parameter] = $this->parseRule($rule);
-                $handler = $this->rules[$ruleName] ?? null;
 
+                $handler = $this->rules[$ruleName] ?? null;
                 if ($handler === null) {
+                    continue;
+                }
+
+                if ($blank && $nullable && !($handler instanceof PresenceRule)) {
                     continue;
                 }
 
