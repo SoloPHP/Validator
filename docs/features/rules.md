@@ -123,11 +123,13 @@ Field must be a valid phone number. Optionally specify region code.
 
 ```php
 $rules = [
-    'phone' => 'phone',        // Any valid number
+    'phone' => 'phone',        // Any valid number in international format
     'phone' => 'phone:US',     // US number
     'phone' => 'phone:UA',     // Ukrainian number
 ];
 ```
+
+Without a region, the number must be in international format (`+14155552671`). Input that cannot be parsed — a national number without a region, an unknown country code — fails with `phone` like any other invalid number.
 
 Uses [libphonenumber](https://github.com/giggsey/libphonenumber-for-php) for validation.
 

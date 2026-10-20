@@ -805,6 +805,47 @@ class ValidatorTest extends TestCase
         $this->assertArrayHasKey('phone', $errors);
     }
 
+    public function testPhoneWithoutRegionRejectsNationalNumber(): void
+    {
+        $data = ['phone' => '4155552671'];
+        $rules = ['phone' => 'phone'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertSame([['rule' => 'phone']], $errors['phone']);
+    }
+
+    public function testPhoneWithoutRegionAcceptsInternationalNumber(): void
+    {
+        $data = ['phone' => '+14155552671'];
+        $rules = ['phone' => 'phone'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testPhoneWithUnknownRegionRejectsNationalNumber(): void
+    {
+        $data = ['phone' => '4155552671'];
+        $rules = ['phone' => 'phone:XX'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertSame([['rule' => 'phone']], $errors['phone']);
+    }
+
+    public function testPhoneWithUnknownCountryCode(): void
+    {
+        $data = ['phone' => '+999 1234567'];
+        $rules = ['phone' => 'phone:US'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertSame([['rule' => 'phone']], $errors['phone']);
+    }
+
     public function testMaxValueValidationWithNonNumeric(): void
     {
         $data = ['price' => 'not-a-number'];
@@ -881,5 +922,148 @@ class ValidatorTest extends TestCase
 
         $this->assertTrue($this->validator->fails());
         $this->assertSame([['rule' => 'uuid']], $errors['id']);
+    }
+
+    public function testWhitespaceAroundRulesIsIgnored(): void
+    {
+        $data = ['email' => 'not-an-email'];
+        $rules = ['email' => ' required | email '];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertSame([['rule' => 'email']], $errors['email']);
+    }
+
+    public function testNullableIsRecognizedWithWhitespace(): void
+    {
+        $data = ['code' => ''];
+        $rules = ['code' => 'min:3 | nullable'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    public function testEmptyRuleSegmentsAreSkipped(): void
+    {
+        $data = ['name' => ''];
+        $rules = ['name' => '|required||'];
+
+        $errors = $this->validator->validate($data, $rules);
+
+        $this->assertSame([['rule' => 'required']], $errors['name']);
+    }
+
+    public function testStringRulesRejectArraysWithoutWarnings(): void
+    {
+        $data = ['pin' => ['1234'], 'slug' => ['a'], 'tags' => [['php']]];
+        $rules = ['pin' => 'length:4', 'slug' => 'regex:/a/', 'tags' => 'in:php,js'];
+
+        $errors = $this->validateWithStrictErrors($data, $rules);
+
+        $this->assertSame([
+            'pin' => [['rule' => 'length', 'params' => ['4']]],
+            'slug' => [['rule' => 'regex']],
+            'tags' => [['rule' => 'in', 'params' => ['php', 'js']]],
+        ], $errors);
+    }
+
+    public function testStringRulesRejectObjectsWithoutToString(): void
+    {
+        $object = new \stdClass();
+        $data = ['pin' => $object, 'name' => $object, 'title' => $object, 'slug' => $object, 'status' => $object];
+        $rules = [
+            'pin' => 'length:3',
+            'name' => 'min:1',
+            'title' => 'max:3',
+            'slug' => 'regex:/a/',
+            'status' => 'in:a,b',
+        ];
+
+        $errors = $this->validateWithStrictErrors($data, $rules);
+
+        $this->assertSame([
+            'pin' => [['rule' => 'length', 'params' => ['3']]],
+            'name' => [['rule' => 'min', 'params' => ['1']]],
+            'title' => [['rule' => 'max', 'params' => ['3']]],
+            'slug' => [['rule' => 'regex']],
+            'status' => [['rule' => 'in', 'params' => ['a', 'b']]],
+        ], $errors);
+    }
+
+    public function testStringRulesReadStringableObjects(): void
+    {
+        $stringable = new class {
+            public function __toString(): string
+            {
+                return 'abc';
+            }
+        };
+        $data = ['code' => $stringable];
+        $rules = ['code' => 'length:3|min:3|max:3|regex:/^abc$/|in:abc,def'];
+
+        $errors = $this->validateWithStrictErrors($data, $rules);
+
+        $this->assertTrue($this->validator->passed());
+        $this->assertEmpty($errors);
+    }
+
+    /**
+     * A rule may validate a nested payload with the same validator instance
+     * (e.g. one injected as ValidatorInterface): the outer call keeps its own
+     * errors and does not pick up the nested ones.
+     */
+    public function testNestedValidateCallKeepsOuterErrors(): void
+    {
+        $address = new class ($this->validator) implements RuleInterface {
+            public function __construct(private Validator $validator)
+            {
+            }
+
+            public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+            {
+                $errors = $this->validator->validate(is_array($value) ? $value : [], ['street' => 'required']);
+                return $errors === [] ? null : ['rule' => 'address'];
+            }
+        };
+        $this->validator->addRule('address', $address);
+
+        $errors = $this->validator->validate(
+            ['name' => '', 'address' => ['street' => '']],
+            ['name' => 'required', 'address' => 'address']
+        );
+
+        $expected = [
+            'name' => [['rule' => 'required']],
+            'address' => [['rule' => 'address']],
+        ];
+        $this->assertSame($expected, $errors);
+        $this->assertSame($expected, $this->validator->errors());
+        $this->assertTrue($this->validator->fails());
+    }
+
+    /**
+     * Validate the way an application with a framework error handler does
+     * (Symfony, Laravel): a PHP warning becomes an exception, i.e. a 500.
+     *
+     * @param array<string, mixed> $data
+     * @param array<string, string> $rules
+     * @return array<string, list<array{rule: string, params?: string[]}>>
+     */
+    private function validateWithStrictErrors(array $data, array $rules): array
+    {
+        set_error_handler(static function (int $errno, string $errstr): bool {
+            if (!(error_reporting() & $errno)) {
+                return false; // silenced with @
+            }
+            throw new \ErrorException($errstr, 0, $errno);
+        });
+
+        try {
+            return $this->validator->validate($data, $rules);
+        } finally {
+            restore_error_handler();
+        }
     }
 }

@@ -6,10 +6,12 @@ namespace Solo\Validator\Rules;
 
 use Solo\Validator\RuleInterface;
 use Solo\Validator\BuildsError;
+use Solo\Validator\CastsToString;
 
 final class InRule implements RuleInterface
 {
     use BuildsError;
+    use CastsToString;
 
     public function validate(mixed $value, ?string $parameter, array $data = []): ?array
     {
@@ -21,7 +23,8 @@ final class InRule implements RuleInterface
         $items = is_array($value) ? $value : [$value];
 
         foreach ($items as $item) {
-            if (!isset($allowedSet[(string)$item])) {
+            $string = $this->castToString($item);
+            if ($string === null || !isset($allowedSet[$string])) {
                 return $this->buildError('in', $parameter);
             }
         }

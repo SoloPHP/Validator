@@ -51,9 +51,12 @@ final class Validator implements ValidatorInterface
     public function validate(array $data, array $rules): array
     {
         $this->errors = [];
+        // Collected locally: a rule may call validate() on this same instance.
+        $errors = [];
 
         foreach ($rules as $field => $ruleSet) {
-            $rulesArray = explode('|', $ruleSet);
+            // Segments are trimmed, as Request-Handler's RuleParser does: 'required | email'.
+            $rulesArray = array_map('trim', explode('|', $ruleSet));
             $value = $data[$field] ?? null;
             $blank = $value === null || $value === '' || $value === [];
             $nullable = in_array('nullable', $rulesArray, true);
@@ -79,12 +82,13 @@ final class Validator implements ValidatorInterface
                 }
 
                 if ($error !== null) {
-                    $this->errors[$field][] = $error;
+                    $errors[$field][] = $error;
                 }
             }
         }
 
-        return $this->errors;
+        $this->errors = $errors;
+        return $errors;
     }
 
     /**
