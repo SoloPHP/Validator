@@ -4,28 +4,19 @@ declare(strict_types=1);
 
 namespace Solo\Validator\Rules;
 
+use Solo\Validator\Field;
 use Solo\Validator\RuleInterface;
-use Solo\Validator\BuildsError;
 
 final class ArrayRule implements RuleInterface
 {
-    use BuildsError;
-
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function validate(mixed $value, array $params, Field $field): ?array
     {
         if (!is_array($value)) {
             return ['rule' => 'array'];
         }
 
-        if ($parameter === null) {
-            return null;
-        }
-
-        $allowedKeys = array_flip(explode(',', $parameter));
-        foreach ($value as $key => $_) {
-            if (!isset($allowedKeys[(string)$key])) {
-                return $this->buildError('array_keys', $parameter);
-            }
+        if ($params !== [] && array_diff_key($value, array_flip($params)) !== []) {
+            return ['rule' => 'array_keys', 'params' => $params];
         }
 
         return null;

@@ -4,19 +4,18 @@ declare(strict_types=1);
 
 namespace Solo\Validator\Rules;
 
+use Solo\Validator\Field;
 use Solo\Validator\PresenceRule;
 use Solo\Validator\RuleInterface;
+use Solo\Validator\Value;
 
+/**
+ * May be absent; when present, must not be blank.
+ */
 final class FilledRule implements RuleInterface, PresenceRule
 {
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function validate(mixed $value, array $params, Field $field): ?array
     {
-        if ($value === null) {
-            return ['rule' => 'filled'];
-        }
-        if ((is_string($value) && trim($value) === '') || (is_array($value) && empty($value))) {
-            return ['rule' => 'filled'];
-        }
-        return null;
+        return !Value::isFilled($value) && $field->present() ? ['rule' => 'filled'] : null;
     }
 }
