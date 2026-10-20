@@ -34,6 +34,8 @@ $rules = [
 ];
 ```
 
+Whitespace around each rule is ignored: `'required | email'` is the same as `'required|email'`.
+
 Rules can have parameters after a colon:
 
 ```php

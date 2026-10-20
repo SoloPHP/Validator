@@ -6,10 +6,12 @@ namespace Solo\Validator\Rules;
 
 use Solo\Validator\RuleInterface;
 use Solo\Validator\BuildsError;
+use Solo\Validator\CastsToString;
 
 final class MaxRule implements RuleInterface
 {
     use BuildsError;
+    use CastsToString;
 
     public function validate(mixed $value, ?string $parameter, array $data = []): ?array
     {
@@ -20,7 +22,15 @@ final class MaxRule implements RuleInterface
         // Arrays: maximum element count. Scalars: maximum string length.
         // Without this branch (string)$array triggers "Array to string
         // conversion" and corrupts JSON responses with a PHP warning.
-        $size = is_array($value) ? count($value) : mb_strlen((string)$value);
+        if (is_array($value)) {
+            $size = count($value);
+        } else {
+            $string = $this->castToString($value);
+            if ($string === null) {
+                return $this->buildError('max', $parameter);
+            }
+            $size = mb_strlen($string);
+        }
 
         return $size > (int)$parameter ? $this->buildError('max', $parameter) : null;
     }
