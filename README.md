@@ -1,24 +1,30 @@
 # Solo Validator
 
-Lightweight PHP validation library with custom rules and structured errors.
+Lightweight PHP validation library: rule strings compiled once, strict about configuration, one structured error per field.
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/solophp/validator.svg)](https://packagist.org/packages/solophp/validator)
-[![PHP Version](https://img.shields.io/badge/PHP-8.1%2B-8892BF.svg)](https://php.net/)
+[![PHP Version](https://img.shields.io/badge/PHP-8.3%2B-8892BF.svg)](https://php.net/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## Features
 
-- **Built-in Rules** — Required, email, phone, uuid, min, max, length, numeric, date, and more
-- **Custom Rules** — Extend validation with your own rules via callbacks or classes
-- **Structured Errors** — Machine-readable error objects with rule names and parameters
-- **Parameterized Rules** — Define rules like `min:8`, `max:100`, `in:a,b,c`
-- **Phone Validation** — International phone validation via libphonenumber
-- **Lightweight** — Minimal dependencies, PSR-4 compliant
+- **Built-in Rules** — required, required_if / with / without, email, phone, uuid, date, min, max, in, regex and more
+- **Fails Fast** — an unknown rule or a bad parameter throws on first use instead of silently validating nothing
+- **Structured Errors** — at most one machine-readable error per field: the rule name and its parameters
+- **Custom Rules** — callables or classes, registered in the constructor
+- **Stateless** — `validate()` returns the errors, so one instance can be shared across requests and workers
+- **Request-Handler ready** — the validator behind [solophp/request-handler](https://github.com/SoloPHP/Request-Handler) 4: the same rule grammar, the same reading of types
 
 ## Installation
 
 ```bash
 composer require solophp/validator
+```
+
+The `phone` rule also needs libphonenumber:
+
+```bash
+composer require giggsey/libphonenumber-for-php-lite
 ```
 
 ## Quick Example
@@ -28,29 +34,21 @@ use Solo\Validator\Validator;
 
 $validator = new Validator();
 
-$data = [
-    'email' => 'user@example.com',
-    'username' => 'john_doe',
-    'age' => 25,
-];
+$errors = $validator->validate(
+    ['email' => 'user@example', 'username' => 'jo', 'age' => '25'],
+    [
+        'email' => 'required|email',
+        'username' => 'required|min:3|max:20',
+        'age' => 'integer|min_value:18',
+    ],
+);
 
-$rules = [
-    'email' => 'required|email',
-    'username' => 'required|min:3|max:20',
-    'age' => 'integer|min_value:18',
-];
+// [
+//     'email' => [['rule' => 'email']],
+//     'username' => [['rule' => 'min', 'params' => ['3']]],
+// ]
 
-$errors = $validator->validate($data, $rules);
-
-if ($validator->fails()) {
-    print_r($validator->errors());
-    // [
-    //     'field' => [
-    //         ['rule' => 'email'],
-    //         ['rule' => 'min', 'params' => ['3']],
-    //     ],
-    // ]
-} else {
+if ($errors === []) {
     echo "Validation passed!";
 }
 ```
@@ -65,9 +63,11 @@ if ($validator->fails()) {
 - [Custom Rules](https://solophp.github.io/Validator/features/custom-rules)
 - [API Reference](https://solophp.github.io/Validator/api/validator)
 
+Upgrading from 3.x? See [UPGRADE.md](UPGRADE.md).
+
 ## Requirements
 
-- PHP 8.1+
+- PHP 8.3+
 
 ## License
 
