@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- PHP 8.1 or higher
+- PHP 8.3 or higher
 - Composer
 
 ## Composer
@@ -15,42 +15,56 @@ composer require solophp/validator
 
 ## Dependencies
 
-The package has minimal dependencies:
-
 ```json
 {
     "require": {
-        "php": "^8.1",
-        "giggsey/libphonenumber-for-php-lite": "^8.13",
+        "php": "^8.3",
         "solophp/contracts": "^1.3"
     }
 }
 ```
 
-- **libphonenumber-for-php-lite** — For phone number validation
-- **solophp/contracts** — Validation interface contract
+- **solophp/contracts** — the `ValidatorInterface` contract the validator implements
+
+The `phone` rule needs libphonenumber, which is optional:
+
+```bash
+composer require giggsey/libphonenumber-for-php-lite
+```
+
+Using `phone` without it throws an `InvalidRuleException` that says so.
 
 ## Basic Setup
 
 ```php
 use Solo\Validator\Validator;
 
-// Create validator instance
 $validator = new Validator();
 
-// Validate data
 $errors = $validator->validate($data, $rules);
 
-// Check result
-if ($validator->fails()) {
-    // Errors are structured: ['field' => [['rule' => 'required'], ...]]
-    foreach ($validator->errors() as $field => $fieldErrors) {
-        foreach ($fieldErrors as $error) {
-            echo "$field: failed rule '{$error['rule']}'\n";
-        }
-    }
+// Errors are structured: ['field' => [['rule' => 'required']], ...]
+foreach ($errors as $field => [$error]) {
+    echo "$field: failed rule '{$error['rule']}'\n";
 }
 ```
+
+Each field reports at most one error, so `[$error]` destructures it.
+
+## With Request-Handler
+
+The validator implements `Solo\Contracts\Validator\ValidatorInterface`, which [solophp/request-handler](https://github.com/SoloPHP/Request-Handler) 4 expects:
+
+```php
+use Solo\RequestHandler\RequestHandler;
+use Solo\Validator\Validator;
+
+$handler = new RequestHandler(new Validator([
+    'unique' => new UniqueRule($connection),   // your custom rules
+]));
+```
+
+The handler passes each DTO's `#[Validate]` strings as they are written; the validator reads them with the same grammar as the handler's own rule parser.
 
 ## Next Steps
 

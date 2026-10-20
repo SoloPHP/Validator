@@ -1,191 +1,151 @@
 # Custom Rules
 
-Extend validation with your own rules.
-
-## Adding Custom Rules
-
-Use `addCustomRule()` to register a custom validation rule:
+Extend validation with your own rules. Register them in the constructor, by name:
 
 ```php
-$validator->addCustomRule('rule_name', function ($value, $param, $data) {
-    // Return true if valid, false if invalid
-    return $value === 'expected';
-});
+use Solo\Validator\Validator;
+
+$validator = new Validator([
+    'even' => fn (mixed $value): bool => is_int($value) && $value % 2 === 0,
+    'unique' => new UniqueRule($connection),
+]);
 ```
 
-**Callback parameters:**
+A rule is a **callable** for simple checks, or a class implementing **`RuleInterface`** for dependencies, its own error shape or presence semantics. Registering a built-in name (`'email' => …`) overrides the built-in rule.
+
+The rules of an instance are fixed once it is constructed. Names that no rule string could refer to are rejected with an `InvalidRuleException`: `nullable` is reserved, and a name cannot be empty, contain `|` or `:`, or have surrounding whitespace.
+
+---
+
+## Callable Rules
+
+Any callable works — a closure, `[Class::class, 'method']`, an invokable object:
+
+```php
+function (mixed $value, array $params, Field $field): bool
+```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$value` | `mixed` | The field value being validated |
-| `$param` | `?string` | Parameter passed to the rule (after `:`) |
-| `$data` | `array` | All data being validated |
+| `$params` | `list<string>` | The rule's parameters: `'divisible_by:5'` gives `['5']` |
+| `$field` | `Field` | The field's name and the whole payload |
 
----
-
-## Examples
+Returning `false` fails the field with `['rule' => name]`, plus `'params' => $params` when the rule has parameters. Callables may declare fewer parameters than they receive, but PHP's own functions reject extra arguments: wrap them, `'alpha' => fn ($value) => is_string($value) && ctype_alpha($value)`.
 
 ### Even Number
 
 ```php
-$validator->addCustomRule('even', function ($value, $param, $data) {
-    return (int)$value % 2 === 0;
-});
+$validator = new Validator([
+    'even' => fn (mixed $value): bool => is_int($value) && $value % 2 === 0,
+]);
 
-$rules = ['number' => 'even'];
-
-$validator->validate(['number' => 3], $rules);
-// Error: [['rule' => 'even']]
-
-$validator->validate(['number' => 4], $rules);
-// Passes
+$validator->validate(['number' => 3], ['number' => 'even']);
+// ['number' => [['rule' => 'even']]]
 ```
 
-### Unique (Database Check)
+### With Parameters
 
 ```php
-$validator->addCustomRule('unique', function ($value, $param, $data) {
-    // $param = "users,email" → table and column
-    [$table, $column] = explode(',', $param);
+$validator = new Validator([
+    'divisible_by' => fn (mixed $value, array $params): bool
+        => is_int($value) && $value % (int)$params[0] === 0,
+]);
 
-    global $db;
-    $stmt = $db->prepare("SELECT COUNT(*) FROM {$table} WHERE {$column} = ?");
-    $stmt->execute([$value]);
-
-    return $stmt->fetchColumn() === 0;
-});
-
-$rules = ['email' => 'required|email|unique:users,email'];
+$validator->validate(['quantity' => 17], ['quantity' => 'divisible_by:5']);
+// ['quantity' => [['rule' => 'divisible_by', 'params' => ['5']]]]
 ```
 
-### Confirmed (Password Confirmation)
+### Using the Field and the Payload
+
+`Field` carries the field's `name`, the whole payload as `data`, and `present()` — whether the payload has the key at all:
 
 ```php
-$validator->addCustomRule('confirmed', function ($value, $param, $data) {
-    $confirmField = $param ?: 'password_confirmation';
-    return isset($data[$confirmField]) && $value === $data[$confirmField];
-});
+use Solo\Validator\Field;
+
+$validator = new Validator([
+    'confirmed' => fn (mixed $value, array $params, Field $field): bool
+        => $value === ($field->data[$params[0] ?? $field->name . '_confirmation'] ?? null),
+    'different' => fn (mixed $value, array $params, Field $field): bool
+        => $value !== ($field->data[$params[0]] ?? null),
+]);
 
 $rules = [
     'password' => 'required|min:8|confirmed',
+    'new_password' => 'required|different:old_password',
 ];
-
-$data = [
-    'password' => 'secret123',
-    'password_confirmation' => 'secret456',  // Doesn't match
-];
-
-$validator->validate($data, $rules);
-// Error: [['rule' => 'confirmed']]
 ```
 
-### Strong Password
+### A Pattern with Alternation
+
+A `regex:` parameter cannot contain `|`, which separates rules. Name the pattern instead:
 
 ```php
-$validator->addCustomRule('strong_password', function ($value, $param, $data) {
-    // At least one uppercase, one lowercase, one digit
-    return preg_match('/[A-Z]/', $value)
-        && preg_match('/[a-z]/', $value)
-        && preg_match('/[0-9]/', $value);
-});
-
-$rules = ['password' => 'required|min:8|strong_password'];
+$validator = new Validator([
+    'size' => fn (mixed $value): bool => is_string($value) && preg_match('/^(S|M|L|XL)$/', $value) === 1,
+]);
 ```
 
-### Depends On Another Field
+### Static Methods
 
 ```php
-$validator->addCustomRule('required_if', function ($value, $param, $data) {
-    // $param = "field,expected_value"
-    [$field, $expected] = explode(',', $param);
-
-    // Only required if other field has expected value
-    if (($data[$field] ?? null) !== $expected) {
-        return true;  // Not required, skip
+final class Rules
+{
+    public static function slug(mixed $value): bool
+    {
+        return is_string($value) && preg_match('/^[a-z0-9-]+$/', $value) === 1;
     }
+}
 
-    return $value !== null && $value !== '';
-});
-
-$rules = [
-    'payment_method' => 'required|in:card,bank',
-    'card_number' => 'required_if:payment_method,card',
-];
-
-$data = ['payment_method' => 'card', 'card_number' => ''];
-// Error on card_number: [['rule' => 'required_if', 'params' => ['payment_method', 'card']]]
-```
-
----
-
-## With Parameters
-
-Custom rules can accept parameters via the colon syntax:
-
-```php
-$validator->addCustomRule('divisible_by', function ($value, $param, $data) {
-    $divisor = (int)$param;
-    return (int)$value % $divisor === 0;
-});
-
-$rules = ['quantity' => 'divisible_by:5'];
-
-$validator->validate(['quantity' => 17], $rules);
-// Error: [['rule' => 'divisible_by', 'params' => ['5']]]
-```
-
----
-
-## Using Full Data Context
-
-The `$data` parameter gives access to all fields:
-
-```php
-$validator->addCustomRule('different', function ($value, $param, $data) {
-    return $value !== ($data[$param] ?? null);
-});
-
-$rules = [
-    'old_password' => 'required',
-    'new_password' => 'required|min:8|different:old_password',
-];
+$validator = new Validator(['slug' => [Rules::class, 'slug']]);
 ```
 
 ---
 
 ## Class-Based Rules (RuleInterface)
 
-For rules with constructor dependencies, complex state, or custom error shapes, implement `Solo\Validator\RuleInterface` instead of using a closure. Register with `addRule()`:
+Implement `Solo\Validator\RuleInterface` and return the full error, or `null` to pass:
 
 ```php
+use Solo\Validator\Field;
 use Solo\Validator\RuleInterface;
 
 final class EvenRule implements RuleInterface
 {
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function validate(mixed $value, array $params, Field $field): ?array
     {
-        return ((int)$value) % 2 === 0 ? null : ['rule' => 'even'];
+        return is_int($value) && $value % 2 === 0 ? null : ['rule' => 'even'];
     }
 }
 
-$validator->addRule('even', new EvenRule());
+$validator = new Validator(['even' => new EvenRule()]);
 ```
-
-The rule returns the full error structure (`['rule' => '...', 'params' => [...]]`) or `null` to pass — Validator does not wrap it.
 
 ### With Constructor Dependencies
 
 ```php
 use Doctrine\DBAL\Connection;
+use Solo\Validator\Field;
+use Solo\Validator\InvalidRuleException;
+use Solo\Validator\ParameterizedRule;
 use Solo\Validator\RuleInterface;
 
-final class UniqueRule implements RuleInterface
+final class UniqueRule implements RuleInterface, ParameterizedRule
 {
-    public function __construct(private readonly Connection $db) {}
-
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function __construct(private readonly Connection $db)
     {
-        [$table, $column] = explode(',', $parameter ?? '');
+    }
+
+    public function checkParams(array $params): void
+    {
+        if (count($params) !== 2) {
+            throw InvalidRuleException::invalidParams('a table and a column');
+        }
+    }
+
+    public function validate(mixed $value, array $params, Field $field): ?array
+    {
+        [$table, $column] = $params;
 
         $exists = (bool) $this->db->createQueryBuilder()
             ->select('1')
@@ -196,24 +156,24 @@ final class UniqueRule implements RuleInterface
             ->executeQuery()
             ->fetchOne();
 
-        // Error omits `params`: table/column names are internal schema.
+        // The error omits params: table and column names are internal schema.
         return $exists ? ['rule' => 'unique'] : null;
     }
 }
 
-$validator->addRule('unique', new UniqueRule($db));
+$validator = new Validator(['unique' => new UniqueRule($db)]);
 
 $rules = ['email' => 'required|email|unique:users,email'];
 ```
 
 ### Custom Error Variants
 
-The rule chooses what to return — useful when a single rule has distinct failure modes:
+The rule chooses what to return — useful when one rule has distinct failure modes:
 
 ```php
 final class PasswordStrengthRule implements RuleInterface
 {
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function validate(mixed $value, array $params, Field $field): ?array
     {
         if (!is_string($value) || strlen($value) < 8) {
             return ['rule' => 'password_strength', 'params' => ['too_short']];
@@ -226,86 +186,61 @@ final class PasswordStrengthRule implements RuleInterface
 }
 ```
 
+### Checking Parameters (ParameterizedRule)
+
+A rule implementing `Solo\Validator\ParameterizedRule` gets its parameters once, when a rule string using it is first compiled — whatever the input, and even when an earlier rule fails the field. Throw `InvalidRuleException` for parameters it cannot use, as `UniqueRule` above does — `InvalidRuleException::invalidParams()` takes what the rule expects, and the validator adds the rule as written and its rule string: `Invalid rule 'unique:users' in 'required|unique:users': expects a table and a column.` A misconfigured rule string then fails in development instead of behaving oddly in production.
+
 ### Presence Rules (PresenceRule)
 
-When a field is marked `nullable`, the validator skips every rule for a **blank** value (`null`, `''`, or `[]`). Rules whose job is to assert presence must run *anyway* — otherwise `required` would be silently disabled by `nullable`. They opt out of the skip by implementing the marker interface `Solo\Validator\PresenceRule`:
+For an absent field, and for a blank value of a `nullable` field, only presence rules run. A rule opts in by implementing the marker interface `Solo\Validator\PresenceRule`; the built-in `required`, `filled` and `required_*` rules do. Callables are never presence rules.
 
 ```php
-namespace Solo\Validator;
-
-interface PresenceRule
-{
-}
-```
-
-The built-in `required` and `filled` rules implement it. Implement it on your own rule when it must still run on blank values of a nullable field:
-
-```php
+use Solo\Validator\Field;
 use Solo\Validator\PresenceRule;
 use Solo\Validator\RuleInterface;
 
-final class RequiredWithRule implements RuleInterface, PresenceRule
+final class RequiredForAdminsRule implements RuleInterface, PresenceRule
 {
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function validate(mixed $value, array $params, Field $field): ?array
     {
-        // Runs even when $value is blank, because of PresenceRule.
-        $blankOther = ($data[$parameter] ?? null) === null;
-        if (!$blankOther && ($value === null || $value === '')) {
-            return ['rule' => 'required_with', 'params' => [(string)$parameter]];
-        }
-        return null;
+        $required = ($field->data['role'] ?? null) === 'admin';
+
+        return $required && ($value === null || $value === '') ? ['rule' => 'required_for_admins'] : null;
     }
 }
 
-$validator->addRule('required_with', new RequiredWithRule());
+$validator = new Validator(['required_for_admins' => new RequiredForAdminsRule()]);
+
+$rules = ['token' => 'nullable|required_for_admins'];
 ```
 
-Without `PresenceRule`, a rule registered via `addRule()` (or a callable via `addCustomRule()`) is skipped for blank values whenever the field also has `nullable` — which is the desired behavior for format/range checks like `email`, `min`, or `regex`.
+### Callable vs RuleInterface
 
-### addCustomRule() vs addRule()
-
-| | `addCustomRule()` | `addRule()` |
+| | Callable | `RuleInterface` |
 |---|---|---|
-| Signature | `callable(mixed, ?string, array): bool` | `RuleInterface::validate(): ?array` |
-| Error shape | Wrapped by Validator: `['rule' => name, 'params' => exploded $parameter]` | Returned by the rule itself |
-| Best for | Quick closures, simple checks | DI-backed rules, custom error shapes |
-
-Both can be mixed in the same validator — pick per rule.
+| Returns | `bool` | the error array, or `null` |
+| Error shape | `['rule' => name, 'params' => $params]` | whatever the rule returns |
+| Parameter checks | — | `ParameterizedRule` |
+| Presence semantics | — | `PresenceRule` |
+| Best for | Quick checks | Dependencies, custom errors |
 
 ---
 
 ## Reusable Validator Setup
 
-For complex applications, register rules in a factory or service:
+Build the validator once — in a factory or your container — and share it: it keeps no state between calls.
 
 ```php
-class ValidatorFactory
+final class ValidatorFactory
 {
-    public static function create(): Validator
+    public static function create(Connection $db): Validator
     {
-        $validator = new Validator();
-
-        $validator->addCustomRule('unique', [self::class, 'validateUnique']);
-        $validator->addCustomRule('exists', [self::class, 'validateExists']);
-        $validator->addCustomRule('confirmed', [self::class, 'validateConfirmed']);
-
-        return $validator;
-    }
-
-    private static function validateUnique($value, $param, $data): bool
-    {
-        // Implementation
-    }
-
-    private static function validateExists($value, $param, $data): bool
-    {
-        // Implementation
-    }
-
-    private static function validateConfirmed($value, $param, $data): bool
-    {
-        $confirmField = $param ?: array_key_first($data) . '_confirmation';
-        return $value === ($data[$confirmField] ?? null);
+        return new Validator([
+            'unique' => new UniqueRule($db),
+            'slug' => [Rules::class, 'slug'],
+            'confirmed' => fn (mixed $value, array $params, Field $field): bool
+                => $value === ($field->data[$field->name . '_confirmation'] ?? null),
+        ]);
     }
 }
 ```

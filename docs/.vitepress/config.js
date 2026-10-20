@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 export default defineConfig({
   title: 'Solo Validator',
-  description: 'Lightweight PHP validation library with custom rules and structured errors',
+  description: 'PHP validation library: compiled rule strings, strict configuration, structured errors',
   base: '/Validator/',
   
   head: [
@@ -10,7 +10,7 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#8b5cf6' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:title', content: 'Solo Validator' }],
-    ['meta', { property: 'og:description', content: 'Lightweight PHP validation library with custom rules and structured errors' }],
+    ['meta', { property: 'og:description', content: 'PHP validation library: compiled rule strings, strict configuration, structured errors' }],
   ],
 
   themeConfig: {
@@ -20,7 +20,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/installation' },
       { text: 'Rules', link: '/features/rules' },
       { text: 'API', link: '/api/validator' },
-      { text: 'v3.2.0', link: 'https://github.com/solophp/validator/releases' },
+      { text: 'v4.0', link: 'https://github.com/solophp/validator/releases' },
       {
         text: 'Links',
         items: [
@@ -36,7 +36,8 @@ export default defineConfig({
         text: 'Getting Started',
         items: [
           { text: 'Installation', link: '/guide/installation' },
-          { text: 'Quick Start', link: '/guide/quick-start' }
+          { text: 'Quick Start', link: '/guide/quick-start' },
+          { text: 'Upgrading from 3.x', link: 'https://github.com/SoloPHP/Validator/blob/main/UPGRADE.md' }
         ]
       },
       {
