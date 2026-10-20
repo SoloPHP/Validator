@@ -4,137 +4,182 @@ declare(strict_types=1);
 
 namespace Solo\Validator;
 
+use Closure;
 use Solo\Contracts\Validator\ValidatorInterface;
-use Solo\Validator\BuildsError;
 
 /**
+ * Each distinct rule string is compiled once per instance: parsed, its rules
+ * resolved and their parameters checked, so an unknown rule or a bad parameter
+ * fails on first use. validate() keeps no state; one instance can be shared.
+ *
  * @phpstan-import-type ValidationError from RuleInterface
+ * @phpstan-type Chain list<array{RuleInterface, list<string>}>
+ * @phpstan-type CompiledRules array{bool, Chain, Chain}
  */
 final class Validator implements ValidatorInterface
 {
-    use BuildsError;
+    /**
+     * Distinct rule strings kept compiled. Past it the oldest is dropped, so
+     * rule strings built per request cannot grow a long-lived instance forever.
+     */
+    private const COMPILED_LIMIT = 1000;
 
-    /** @var array<string, RuleInterface>|null */
-    private static ?array $defaults = null;
+    /** @var array<string, RuleInterface> */
+    private array $rules = [];
 
-    /** @var array<string, RuleInterface|callable> */
-    private array $rules;
+    /** @var array<string, CompiledRules> */
+    private array $compiled = [];
 
-    /** @var array<string, list<ValidationError>> */
-    private array $errors = [];
-
-    public function __construct()
+    /**
+     * @param array<string, RuleInterface|callable(mixed, list<string>, Field): bool> $rules
+     *        Custom rules by name; a built-in rule's name overrides it. A callable
+     *        returning false fails with ['rule' => name, 'params' => its params].
+     * @throws InvalidRuleException A name no rule string can refer to
+     * @throws \TypeError A rule that is neither a RuleInterface nor a callable
+     */
+    public function __construct(array $rules = [])
     {
-        self::$defaults ??= [
-            'required'  => new Rules\RequiredRule(),
-            'email'     => new Rules\EmailRule(),
-            'phone'     => new Rules\PhoneRule(),
-            'length'    => new Rules\LengthRule(),
-            'min'       => new Rules\MinRule(),
-            'max'       => new Rules\MaxRule(),
-            'filled'    => new Rules\FilledRule(),
-            'integer'   => new Rules\IntegerRule(),
-            'string'    => new Rules\StringRule(),
-            'regex'     => new Rules\RegexRule(),
-            'numeric'   => new Rules\NumericRule(),
-            'array'     => new Rules\ArrayRule(),
-            'min_value' => new Rules\MinValueRule(),
-            'max_value' => new Rules\MaxValueRule(),
-            'in'        => new Rules\InRule(),
-            'boolean'   => new Rules\BooleanRule(),
-            'date'      => new Rules\DateRule(),
-            'uuid'      => new Rules\UuidRule(),
-        ];
-        $this->rules = self::$defaults;
+        foreach ($rules as $name => $rule) {
+            $name = (string)$name;
+            if (self::parse($name) !== [false, [[$name, '', $name]]]) {
+                throw InvalidRuleException::invalidName($name);
+            }
+            $this->rules[$name] = $rule instanceof RuleInterface
+                ? $rule
+                : new Rules\CallbackRule($name, Closure::fromCallable($rule));
+        }
     }
 
+    /**
+     * An absent field is checked by presence rules only, and so is a blank
+     * value (null, '', []) of a nullable field. The first failing rule ends
+     * the field, so each field reports at most one error.
+     *
+     * @return array<string, list<ValidationError>>
+     * @throws InvalidRuleException An unknown rule or invalid parameters
+     */
     public function validate(array $data, array $rules): array
     {
-        $this->errors = [];
-        // Collected locally: a rule may call validate() on this same instance.
         $errors = [];
 
-        foreach ($rules as $field => $ruleSet) {
-            // Segments are trimmed, as Request-Handler's RuleParser does: 'required | email'.
-            $rulesArray = array_map('trim', explode('|', $ruleSet));
-            $value = $data[$field] ?? null;
-            $blank = $value === null || $value === '' || $value === [];
-            $nullable = in_array('nullable', $rulesArray, true);
+        foreach ($rules as $name => $ruleString) {
+            [$nullable, $chain, $presenceChain] = $this->compiled[$ruleString] ?? $this->compile($ruleString);
+            $value = $data[$name] ?? null;
+            if (($value === null && !array_key_exists($name, $data)) || ($nullable && Value::isBlank($value))) {
+                $chain = $presenceChain;
+            }
+            if ($chain === []) {
+                continue;
+            }
 
-            foreach ($rulesArray as $rule) {
-                [$ruleName, $parameter] = $this->parseRule($rule);
-
-                $handler = $this->rules[$ruleName] ?? null;
-                if ($handler === null) {
-                    continue;
-                }
-
-                if ($blank && $nullable && !($handler instanceof PresenceRule)) {
-                    continue;
-                }
-
-                if ($handler instanceof RuleInterface) {
-                    $error = $handler->validate($value, $parameter, $data);
-                } else {
-                    $error = $handler($value, $parameter, $data)
-                        ? null
-                        : $this->buildError($ruleName, $parameter);
-                }
-
+            $field = new Field((string)$name, $data);
+            foreach ($chain as [$rule, $params]) {
+                $error = $rule->validate($value, $params, $field);
                 if ($error !== null) {
-                    $errors[$field][] = $error;
+                    $errors[$name] = [$error];
+                    break;
                 }
             }
         }
 
-        $this->errors = $errors;
         return $errors;
     }
 
     /**
-     * Register a callable rule. A falsy return becomes a standard error.
-     *
-     * @param callable(mixed, ?string, array<string, mixed>): bool $callback
+     * @return CompiledRules The nullable flag, every rule, and the presence rules alone
      */
-    public function addCustomRule(string $name, callable $callback): void
+    private function compile(string $ruleString): array
     {
-        $this->rules[$name] = $callback;
-    }
+        [$nullable, $segments] = self::parse($ruleString);
+        $chain = [];
+        $presenceChain = [];
 
-    public function addRule(string $name, RuleInterface $rule): void
-    {
-        $this->rules[$name] = $rule;
-    }
+        foreach ($segments as [$name, $args, $segment]) {
+            $rule = $this->rules[$name] ??= self::builtIn($name)
+                ?? throw InvalidRuleException::unknownRule($name, $ruleString);
+            $params = match (true) {
+                $args === '' => [],
+                $rule instanceof WholeArgumentRule => [$args],
+                default => explode(',', $args),
+            };
+            if ($rule instanceof ParameterizedRule) {
+                try {
+                    $rule->checkParams($params);
+                } catch (InvalidRuleException $e) {
+                    throw InvalidRuleException::at($segment, $ruleString, $e);
+                }
+            }
 
-    public function fails(): bool
-    {
-        return !empty($this->errors);
-    }
-
-    /**
-     * Errors from the most recent validate() call; cleared on each new call.
-     *
-     * @return array<string, list<ValidationError>>
-     */
-    public function errors(): array
-    {
-        return $this->errors;
-    }
-
-    public function passed(): bool
-    {
-        return empty($this->errors);
-    }
-
-    /**
-     * @return array{0: string, 1: string|null}
-     */
-    private function parseRule(string $rule): array
-    {
-        if (!str_contains($rule, ':')) {
-            return [$rule, null];
+            $chain[] = [$rule, $params];
+            if ($rule instanceof PresenceRule) {
+                $presenceChain[] = [$rule, $params];
+            }
         }
-        [$ruleName, $parameter] = explode(':', $rule, 2);
-        return [$ruleName, $parameter];
+
+        if (count($this->compiled) >= self::COMPILED_LIMIT) {
+            unset($this->compiled[array_key_first($this->compiled)]);
+        }
+
+        return $this->compiled[$ruleString] = [$nullable, $chain, $presenceChain];
+    }
+
+    /**
+     * Split a rule string the way Request-Handler's RuleParser does: on `|`,
+     * trimmed, skipping empty segments; a rule's name ends at the first `:`.
+     * `nullable` is a flag, not a rule.
+     *
+     * @return array{bool, list<array{string, string, string}>} The flag, and each rule's name, arguments and segment
+     */
+    private static function parse(string $ruleString): array
+    {
+        $nullable = false;
+        $segments = [];
+
+        foreach (explode('|', $ruleString) as $segment) {
+            $segment = trim($segment);
+            if ($segment === '') {
+                continue;
+            }
+
+            [$name, $args] = explode(':', $segment, 2) + [1 => ''];
+            if ($name === 'nullable') {
+                $nullable = true;
+                continue;
+            }
+            $segments[] = [$name, $args, $segment];
+        }
+
+        return [$nullable, $segments];
+    }
+
+    private static function builtIn(string $name): ?RuleInterface
+    {
+        return match ($name) {
+            'required' => new Rules\RequiredRule(),
+            'required_if' => new Rules\RequiredIfRule(),
+            'required_unless' => new Rules\RequiredIfRule(unless: true),
+            'required_with' => new Rules\RequiredWithRule(),
+            'required_with_all' => new Rules\RequiredWithRule(all: true),
+            'required_without' => new Rules\RequiredWithRule(without: true),
+            'required_without_all' => new Rules\RequiredWithRule(all: true, without: true),
+            'filled' => new Rules\FilledRule(),
+            'string' => new Rules\StringRule(),
+            'integer' => new Rules\IntegerRule(),
+            'numeric' => new Rules\NumericRule(),
+            'boolean' => new Rules\BooleanRule(),
+            'array' => new Rules\ArrayRule(),
+            'email' => new Rules\EmailRule(),
+            'phone' => new Rules\PhoneRule(),
+            'uuid' => new Rules\UuidRule(),
+            'date' => new Rules\DateRule(),
+            'regex' => new Rules\RegexRule(),
+            'in' => new Rules\InRule(),
+            'min' => new Rules\MinRule(),
+            'max' => new Rules\MaxRule(),
+            'length' => new Rules\LengthRule(),
+            'min_value' => new Rules\MinValueRule(),
+            'max_value' => new Rules\MaxValueRule(),
+            default => null,
+        };
     }
 }

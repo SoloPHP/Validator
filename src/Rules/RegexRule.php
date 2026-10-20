@@ -4,20 +4,30 @@ declare(strict_types=1);
 
 namespace Solo\Validator\Rules;
 
+use Solo\Validator\Field;
+use Solo\Validator\InvalidRuleException;
+use Solo\Validator\ParameterizedRule;
 use Solo\Validator\RuleInterface;
-use Solo\Validator\CastsToString;
+use Solo\Validator\Value;
+use Solo\Validator\WholeArgumentRule;
 
-final class RegexRule implements RuleInterface
+/**
+ * The pattern may contain commas but not `|`, which splits the rule string:
+ * register a callable rule for an alternation.
+ */
+final class RegexRule implements RuleInterface, ParameterizedRule, WholeArgumentRule
 {
-    use CastsToString;
-
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function checkParams(array $params): void
     {
-        $string = $this->castToString($value);
-        if ($parameter === null || $string === null) {
-            return ['rule' => 'regex'];
+        if ($params === [] || @preg_match($params[0], '') === false) {
+            throw InvalidRuleException::invalidParams('a valid PCRE pattern');
         }
-        $result = @preg_match($parameter, $string);
-        return ($result === 1) ? null : ['rule' => 'regex'];
+    }
+
+    public function validate(mixed $value, array $params, Field $field): ?array
+    {
+        $string = Value::toString($value);
+
+        return $string !== null && preg_match($params[0], $string) === 1 ? null : ['rule' => 'regex'];
     }
 }
