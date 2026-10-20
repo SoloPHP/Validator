@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Solo Validator
   text: PHP Validation Library
-  tagline: Lightweight, flexible validation with custom rules and structured errors.
+  tagline: Rule strings compiled once, strict about configuration, one structured error per field.
   image:
     src: /logo.svg
     alt: Solo Validator
@@ -19,22 +19,22 @@ hero:
 features:
   - icon: ✅
     title: Built-in Rules
-    details: Required, email, phone, uuid, min, max, length, numeric, date, and more.
-  - icon: 🔧
-    title: Custom Rules
-    details: Extend validation with your own rules via simple callbacks.
+    details: required, required_if / with / without, email, phone, uuid, date, min, max, in, regex and more.
+  - icon: 🛑
+    title: Fails Fast
+    details: An unknown rule or a bad parameter throws on first use instead of silently validating nothing.
   - icon: 📦
     title: Structured Errors
-    details: Get machine-readable error objects with rule names and parameters.
-  - icon: 🎯
-    title: Parameterized Rules
-    details: Define rules with parameters like min:8, max:100, in:a,b,c.
-  - icon: 📱
-    title: Phone Validation
-    details: International phone number validation via libphonenumber.
-  - icon: 🪶
-    title: Lightweight
-    details: Minimal dependencies, PSR-4 compliant, easy to integrate.
+    details: At most one machine-readable error per field, with the rule name and its parameters.
+  - icon: 🔧
+    title: Custom Rules
+    details: Callables or classes, registered in the constructor, with access to the whole payload.
+  - icon: ⚡
+    title: Compiled and Stateless
+    details: Each rule string is parsed once; validate() keeps no state, so one instance serves every request.
+  - icon: 🤝
+    title: Request-Handler Ready
+    details: The validator behind solophp/request-handler 4, with the same rule grammar and reading of types.
 ---
 
 <style>
@@ -58,25 +58,20 @@ use Solo\Validator\Validator;
 
 $validator = new Validator();
 
-$data = [
-    'email' => 'user@example.com',
-    'username' => 'john_doe',
-    'age' => 25,
-];
+$errors = $validator->validate(
+    ['email' => 'user@example.com', 'username' => 'john_doe', 'age' => 25],
+    [
+        'email' => 'required|email',
+        'username' => 'required|min:3|max:20',
+        'age' => 'integer|min_value:18',
+    ],
+);
 
-$rules = [
-    'email' => 'required|email',
-    'username' => 'required|min:3|max:20',
-    'age' => 'integer|min_value:18',
-];
-
-$errors = $validator->validate($data, $rules);
-
-if ($validator->fails()) {
-    // Structured errors: ['field' => [['rule' => 'email'], ...]]
-    print_r($validator->errors());
-} else {
+if ($errors === []) {
     echo "Validation passed!";
+} else {
+    // ['field' => [['rule' => 'email']], ...]
+    print_r($errors);
 }
 ```
 
@@ -86,4 +81,4 @@ if ($validator->fails()) {
 composer require solophp/validator
 ```
 
-**Requirements:** PHP 8.1+
+**Requirements:** PHP 8.3+

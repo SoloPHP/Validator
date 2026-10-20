@@ -2,11 +2,17 @@
 
 Complete reference of all built-in validation rules.
 
-## String Rules
+Rules that read a value as a string — `min`, `max`, `length`, `regex`, `in` — accept a string, an int, a finite float or a `Stringable` object. Any other value (a bool, an array where the rule wants a string, an object without `__toString()`) fails the rule; it never raises a PHP warning.
+
+## Presence Rules
+
+Presence rules run for every field: also when it is absent, and also when it is blank under `nullable`. Every other rule is skipped in those two cases.
+
+A value is **filled** unless it is `null`, `''`, `[]` or a string of only whitespace.
 
 ### required
 
-Field must not be empty, null, or an empty array.
+Field must be filled.
 
 ```php
 $rules = ['name' => 'required'];
@@ -14,11 +20,85 @@ $rules = ['name' => 'required'];
 
 ### filled
 
-Field must not be empty if present.
+Field may be absent; when present, it must be filled.
 
 ```php
 $rules = ['description' => 'filled'];
 ```
+
+### required_if
+
+Field must be filled when another field equals one of the given values.
+
+```php
+$rules = [
+    'company' => 'required_if:type,company',
+    'reason' => 'required_if:status,rejected,cancelled',
+];
+```
+
+The other field's value is compared with how the rule string spells it:
+
+| Rule spells | Matches |
+|---|---|
+| `true` / `false` | what the `boolean` rule reads as such: `true`, `1`, `'1'`, `'yes'`, `'on'`… |
+| `null` | `null`, or the field is absent |
+| `1` / `0` | also `true` / `false` |
+| anything else | the value's string form, exactly |
+
+### required_unless
+
+Field must be filled unless another field equals one of the given values.
+
+```php
+$rules = ['tax_id' => 'required_unless:country,US'];
+```
+
+### required_with / required_with_all
+
+Field must be filled when any (`required_with`) or all (`required_with_all`) of the listed fields are filled.
+
+```php
+$rules = [
+    'email' => 'required_with:newsletter',
+    'card_cvc' => 'required_with_all:card_number,card_expiry',
+];
+```
+
+### required_without / required_without_all
+
+Field must be filled when any (`required_without`) or all (`required_without_all`) of the listed fields are not filled.
+
+```php
+$rules = [
+    'email' => 'required_without:phone',
+    'contact' => 'required_without_all:email,phone',
+];
+```
+
+### nullable
+
+Not a rule but a flag: when the value is **blank** — `null`, `''` or `[]` — only presence rules run, so blank input passes.
+
+```php
+$rules = [
+    'middle_name' => 'nullable|min:2',
+    'website' => 'nullable|regex:/^https?:\/\//',
+];
+
+// All valid:
+$data = ['middle_name' => null];
+$data = ['middle_name' => ''];
+$data = ['middle_name' => 'James'];
+```
+
+Only blank values are skipped. `'0'`, `0`, `false` and whitespace such as `'   '` are not blank and are validated by the remaining rules.
+
+`nullable` combines with conditional presence rules: `nullable|required_if:type,company` accepts a blank value unless `type` is `company`. With `required` it is contradictory — `nullable|required` still fails on a blank value.
+
+---
+
+## Type Rules
 
 ### string
 
@@ -28,39 +108,164 @@ Field must be a string.
 $rules = ['title' => 'string'];
 ```
 
-### min
+### integer
 
-Field must have at least X characters, or — when the value is an array — at least X elements.
+Field must be an integer: an int, a whole float a float holds exactly (`5.0`), or a string PHP reads as an int (`'42'`, `'-5'`). Never a bool.
+
+```php
+$rules = ['age' => 'integer'];
+```
+
+### numeric
+
+Field must be a finite number: an int, a float or a numeric string (`'9.99'`, `'1e3'`). Never a bool, `INF`, `NAN`, or `'1e400'` (which overflows to `INF`).
+
+```php
+$rules = ['price' => 'numeric'];
+```
+
+### boolean
+
+Field must be a boolean value. Accepts:
+- `true`, `false`
+- `1`, `0`
+- `'1'`, `'0'`, `'true'`, `'false'`, `'yes'`, `'no'`, `'on'`, `'off'` in any case
+
+```php
+$rules = ['is_active' => 'boolean'];
+```
+
+### array
+
+Field must be an array. Optionally limit its keys.
 
 ```php
 $rules = [
-    'password' => 'min:8',   // string: at least 8 chars
+    'tags' => 'array',                      // Any array
+    'user' => 'array:name,email,phone',     // Only these keys allowed
+];
+
+// Fails with ['rule' => 'array_keys', 'params' => ['name', 'email', 'phone']]
+$data = ['user' => ['name' => 'John', 'password' => 'secret']];
+```
+
+The integer, numeric and boolean rules accept exactly what Request-Handler 4 converts into an `int`, `float` or `bool` property.
+
+---
+
+## Size Rules
+
+Sizes count the elements of an array, or the characters (multibyte-aware) of a string, int, float or `Stringable`. `null` has size 0; a bool or another object fails.
+
+### min
+
+```php
+$rules = [
+    'password' => 'min:8',   // string: at least 8 characters
     'tags' => 'min:1',       // array: at least 1 element
 ];
 ```
 
 ### max
 
-Field must not exceed X characters, or — when the value is an array — must not contain more than X elements.
-
 ```php
 $rules = [
-    'username' => 'max:20',  // string: at most 20 chars
+    'username' => 'max:20',  // string: at most 20 characters
     'tags' => 'max:5',       // array: at most 5 elements
 ];
 ```
 
 ### length
 
-Field must be exactly X characters.
+```php
+$rules = [
+    'pin' => 'length:4',     // string: exactly 4 characters
+    'rgb' => 'length:3',     // array: exactly 3 elements
+];
+```
+
+The parameter must be one non-negative integer.
+
+---
+
+## Numeric Value Rules
+
+### min_value
+
+Field must be a number (as `numeric` reads it) of at least X.
 
 ```php
-$rules = ['pin' => 'length:4'];
+$rules = ['age' => 'min_value:18'];
+```
+
+### max_value
+
+Field must be a number (as `numeric` reads it) of at most X.
+
+```php
+$rules = ['quantity' => 'max_value:100'];
+```
+
+A value that is not a number fails the rule with its own error (`min_value` / `max_value`). The parameter must be one finite number.
+
+---
+
+## Format Rules
+
+### email
+
+Field must be a string holding a valid email address.
+
+```php
+$rules = ['email' => 'email'];
+```
+
+### phone
+
+Field must be a valid phone number. Optionally specify a region code (any case).
+
+```php
+$rules = [
+    'phone' => 'phone',        // A valid number in international format (+14155552671)
+    'phone' => 'phone:US',     // A number without a country code is read as a US number
+];
+```
+
+Input that cannot be parsed — a national number without a region, an unknown country code — fails like any other invalid number. With a region, the error carries it: `['rule' => 'phone', 'params' => ['US']]`.
+
+Needs [libphonenumber](https://github.com/giggsey/libphonenumber-for-php): `composer require giggsey/libphonenumber-for-php-lite`.
+
+### date
+
+Field must be a valid date. Optionally specify a format.
+
+```php
+$rules = [
+    'created_at' => 'date',               // Any date PHP can read
+    'birth_date' => 'date:Y-m-d',         // Exactly this format
+    'event_time' => 'date:Y-m-d H:i:s',
+    'published' => 'date:D, d M Y',       // Commas are fine
+];
+```
+
+Without a format, `date` accepts an int (a Unix timestamp), a digit string that is one, or a string PHP parses as a date (`'2024-01-15'`, `'next monday'`). It rejects an impossible date (`'2024-02-31'`), digits PHP would read as a time of day (`'1230'`), an empty string and floats.
+
+With a format, the value — a string, or an int read as one — must be written exactly in it: `'2024-1-5'` fails `date:Y-m-d` (use `date:Y-n-j` for unpadded numbers), and impossible dates fail. Formats with parse-only characters (`!`, `|`, `?`, `*`, `#`, `+`) cannot be reproduced, so for them a successful parse is enough. The error is `['rule' => 'date_format', 'params' => [format]]`.
+
+### uuid
+
+Field must be a UUID string: 8-4-4-4-12 hexadecimal digits, any case.
+
+```php
+$rules = ['id' => 'uuid'];
+
+// Valid
+$data = ['id' => '550e8400-e29b-41d4-a716-446655440000'];
 ```
 
 ### regex
 
-Field must match the regex pattern.
+Field must match the pattern.
 
 ```php
 $rules = [
@@ -69,147 +274,7 @@ $rules = [
 ];
 ```
 
----
-
-## Numeric Rules
-
-### integer
-
-Field must be an integer.
-
-```php
-$rules = ['age' => 'integer'];
-```
-
-### numeric
-
-Field must be a number (integer or float).
-
-```php
-$rules = ['price' => 'numeric'];
-```
-
-### min_value
-
-Field must be at least X (numeric comparison).
-
-```php
-$rules = ['age' => 'min_value:18'];
-```
-
-### max_value
-
-Field must not exceed X (numeric comparison).
-
-```php
-$rules = ['quantity' => 'max_value:100'];
-```
-
----
-
-## Format Rules
-
-### email
-
-Field must be a valid email address.
-
-```php
-$rules = ['email' => 'email'];
-```
-
-### phone
-
-Field must be a valid phone number. Optionally specify region code.
-
-```php
-$rules = [
-    'phone' => 'phone',        // Any valid number in international format
-    'phone' => 'phone:US',     // US number
-    'phone' => 'phone:UA',     // Ukrainian number
-];
-```
-
-Without a region, the number must be in international format (`+14155552671`). Input that cannot be parsed — a national number without a region, an unknown country code — fails with `phone` like any other invalid number.
-
-Uses [libphonenumber](https://github.com/giggsey/libphonenumber-for-php) for validation.
-
-### date
-
-Field must be a valid date. Optionally specify format.
-
-```php
-$rules = [
-    'created_at' => 'date',              // Any parseable date
-    'birth_date' => 'date:Y-m-d',        // Specific format
-    'event_time' => 'date:Y-m-d H:i:s',  // With time
-];
-```
-
-Also accepts Unix timestamps:
-
-```php
-$data = ['timestamp' => 1705334400];
-$rules = ['timestamp' => 'date'];  // Valid
-```
-
-### uuid
-
-Field must be a valid UUID (v1-v5).
-
-```php
-$rules = ['id' => 'uuid'];
-
-// Valid
-$data = ['id' => '550e8400-e29b-41d4-a716-446655440000'];
-
-// Invalid
-$data = ['id' => 'not-a-uuid'];
-```
-
----
-
-## Type Rules
-
-### boolean
-
-Field must be a boolean value. Accepts:
-- `true`, `false`
-- `1`, `0`
-- `'1'`, `'0'`
-- `'true'`, `'false'`
-- `'yes'`, `'no'`
-- `'on'`, `'off'`
-
-```php
-$rules = ['is_active' => 'boolean'];
-
-// All valid:
-$data = ['is_active' => true];
-$data = ['is_active' => 1];
-$data = ['is_active' => 'yes'];
-$data = ['is_active' => 'on'];
-```
-
-### array
-
-Field must be an array. Optionally specify allowed keys.
-
-```php
-$rules = [
-    'tags' => 'array',                      // Any array
-    'user' => 'array:name,email,phone',     // Only these keys allowed
-];
-```
-
-Example with key validation:
-
-```php
-// Valid
-$data = ['user' => ['name' => 'John', 'email' => 'john@example.com']];
-
-// Invalid - 'password' key not allowed
-$data = ['user' => ['name' => 'John', 'password' => 'secret']];
-```
+An invalid pattern throws when the rule string is first used. The pattern can contain commas but not `|`, which separates rules — register a [custom rule](/features/custom-rules) for an alternation. The error has no parameters, so the pattern stays private.
 
 ---
 
@@ -217,46 +282,22 @@ $data = ['user' => ['name' => 'John', 'password' => 'secret']];
 
 ### in
 
-Field must be one of the specified values.
+Field must be one of the listed values; for an array value, every element must be.
 
 ```php
 $rules = [
     'status' => 'in:active,inactive,pending',
-    'role' => 'in:admin,user,guest',
+    'tags' => 'in:php,javascript,python,go',
 ];
-```
 
-Also works with arrays:
-
-```php
-$rules = ['tags' => 'in:php,javascript,python,go'];
-
-// Valid - all values are in the allowed list
+// Valid
 $data = ['tags' => ['php', 'javascript']];
 
 // Invalid - 'ruby' is not allowed
 $data = ['tags' => ['php', 'ruby']];
 ```
 
-### nullable
-
-Marks a field as optional. When the value is **blank** — `null`, an empty string `''`, or an empty array `[]` — every other rule on that field is skipped, so blank input passes.
-
-```php
-$rules = [
-    'middle_name' => 'nullable|min:2',
-    'website' => 'nullable|regex:/^https?:\/\//',
-];
-
-// All valid:
-$data = ['middle_name' => null];      // absent / null
-$data = ['middle_name' => ''];        // empty string
-$data = ['middle_name' => 'James'];   // present and validated
-```
-
-Only blank values are skipped. Non-blank "falsy" values such as `'0'`, `0`, or `false` are **not** treated as blank and are still validated by the remaining rules.
-
-The presence rules `required` and `filled` are the exception — they always run, even alongside `nullable`, since their whole job is to assert presence. Combining them with `nullable` is contradictory (`required|nullable` still fails on a blank value). Any custom rule that needs to run on blank values can opt in by implementing [`PresenceRule`](/features/custom-rules#presence-rules-presencerule).
+Values are compared by their string form, exactly. A bool, `null`, a nested array or an object without `__toString()` never matches.
 
 ---
 
@@ -264,48 +305,47 @@ The presence rules `required` and `filled` are the exception — they always run
 
 | Rule | Parameters | Description |
 |------|------------|-------------|
-| `required` | — | Must not be empty |
-| `filled` | — | Must not be empty if present |
+| `required` | — | Must be filled |
+| `filled` | — | Must be filled if present |
+| `required_if` | `field,value,…` | Required when another field has one of the values |
+| `required_unless` | `field,value,…` | Required unless another field has one of the values |
+| `required_with` | `field,…` | Required when any listed field is filled |
+| `required_with_all` | `field,…` | Required when all listed fields are filled |
+| `required_without` | `field,…` | Required when any listed field is not filled |
+| `required_without_all` | `field,…` | Required when no listed field is filled |
+| `nullable` | — | Blank (`null` / `''` / `[]`) runs presence rules only |
 | `string` | — | Must be a string |
 | `integer` | — | Must be an integer |
-| `numeric` | — | Must be a number |
-| `boolean` | — | Must be true/false |
+| `numeric` | — | Must be a finite number |
+| `boolean` | — | Must be boolean-like |
 | `array` | `keys` (optional) | Must be an array |
-| `email` | — | Must be valid email |
-| `phone` | `region` (optional) | Must be valid phone |
-| `date` | `format` (optional) | Must be valid date |
-| `uuid` | — | Must be valid UUID |
-| `min` | `length` | Minimum string length or array element count |
-| `max` | `length` | Maximum string length or array element count |
-| `length` | `length` | Exact string length |
-| `min_value` | `value` | Minimum numeric value |
-| `max_value` | `value` | Maximum numeric value |
-| `in` | `values` | Must be in list |
-| `regex` | `pattern` | Must match pattern |
-| `nullable` | — | Allow blank (null / `''` / `[]`); skips other rules |
+| `min` | `size` | Minimum characters or elements |
+| `max` | `size` | Maximum characters or elements |
+| `length` | `size` | Exact characters or elements |
+| `min_value` | `number` | Minimum numeric value |
+| `max_value` | `number` | Maximum numeric value |
+| `email` | — | Must be a valid email |
+| `phone` | `region` (optional) | Must be a valid phone number |
+| `date` | `format` (optional) | Must be a valid date |
+| `uuid` | — | Must be a UUID |
+| `regex` | `pattern` | Must match the pattern |
+| `in` | `values` | Must be one of the values |
 
 ---
 
 ## Combining Rules
 
-Rules are processed left to right:
+Rules run left to right, and the first failing rule ends the field — each field reports at most one error:
 
 ```php
 $rules = [
-    // Required, then validate format
-    'email' => 'required|email',
-
-    // Required, then check length
+    'email' => 'required|email',                         // missing → required
     'password' => 'required|min:8|max:100',
-
-    // Required, numeric, then range
-    'age' => 'required|integer|min_value:18|max_value:120',
-
-    // Optional, but if present must be valid
+    'age' => 'required|integer|min_value:18|max_value:120', // 'abc' → integer
     'website' => 'nullable|regex:/^https?:\/\//',
 ];
 ```
 
 ::: tip
-`nullable` applies to the whole field regardless of its position in the chain, but placing it first reads best. It skips the remaining rules only when the value is blank (`null`, `''`, or `[]`); `required` and `filled` still run.
+`nullable` applies to the whole field wherever it stands in the chain, but placing it first reads best.
 :::

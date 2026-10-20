@@ -1,6 +1,6 @@
 # Validator
 
-Main validation class.
+Main validation class. Implements `Solo\Contracts\Validator\ValidatorInterface`.
 
 ```php
 use Solo\Validator\Validator;
@@ -11,16 +11,31 @@ $validator = new Validator();
 ## Constructor
 
 ```php
-public function __construct()
+public function __construct(array $rules = [])
 ```
 
-Create a new Validator instance.
+Create a validator, optionally with custom rules.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$rules` | `array<string, RuleInterface\|callable>` | Custom rules by name; a built-in name overrides that rule |
+
+**Throws:**
+- `InvalidRuleException` — a name no rule string can refer to (`nullable`, empty, containing `|` or `:`, or with surrounding whitespace)
+- `TypeError` — a rule that is neither a `RuleInterface` nor a callable
 
 **Example:**
 
 ```php
-$validator = new Validator();
+$validator = new Validator([
+    'even' => fn (mixed $value): bool => is_int($value) && $value % 2 === 0,
+    'unique' => new UniqueRule($db),
+]);
 ```
+
+See [Custom Rules](/features/custom-rules).
 
 ---
 
@@ -37,24 +52,21 @@ Validate data against rules.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `$data` | `array<string, mixed>` | Data to validate |
-| `$rules` | `array<string, string>` | Validation rules |
+| `$rules` | `array<string, string>` | Rule strings by field: `['email' => 'required\|email']` |
 
-**Returns:** `array<string, list<array{rule: string, params?: string[]}>>` — Structured errors by field
+**Returns:** `array<string, list<array{rule: string, params?: list<string>}>>` — errors by field, at most one per field; `[]` when the data is valid.
+
+**Throws:** `InvalidRuleException` — an unknown rule, or parameters a rule cannot use. Raised the first time a rule string is used, whatever the data.
+
+An absent field is checked by presence rules only, and so is a blank value (`null`, `''`, `[]`) of a `nullable` field. The first failing rule ends the field.
 
 **Example:**
 
 ```php
-$data = [
-    'email' => 'invalid',
-    'password' => '123',
-];
-
-$rules = [
-    'email' => 'required|email',
-    'password' => 'required|min:8',
-];
-
-$errors = $validator->validate($data, $rules);
+$errors = $validator->validate(
+    ['email' => 'invalid', 'password' => '123'],
+    ['email' => 'required|email', 'password' => 'required|min:8'],
+);
 
 // [
 //     'email' => [
@@ -66,235 +78,68 @@ $errors = $validator->validate($data, $rules);
 // ]
 ```
 
+`validate()` keeps no state: call it any number of times, from rules too, and share the instance between requests. Each distinct rule string is compiled once per instance; up to 1000 are kept, then the oldest is dropped.
+
 ---
 
-## fails()
+## InvalidRuleException
 
 ```php
-public function fails(): bool
+final class InvalidRuleException extends \LogicException
 ```
 
-Check if validation failed.
+A configuration error, not invalid input: fix the rule string or the registration. Custom rules throw it from `checkParams()`, usually as `InvalidRuleException::invalidParams('a table and a column')`; the validator then names the rule as written and its rule string: `Invalid rule 'unique:users' in 'required|unique:users': expects a table and a column.`
 
-**Returns:** `true` if there are errors, `false` otherwise.
+---
+
+## Field
 
 ```php
-$validator->validate($data, $rules);
+final readonly class Field
+{
+    public string $name;   // the field being validated
+    public array $data;    // the whole payload
 
-if ($validator->fails()) {
-    // Handle errors
+    public function present(): bool;   // whether the payload has the field's key, null included
 }
 ```
 
----
-
-## passed()
-
-```php
-public function passed(): bool
-```
-
-Check if validation passed.
-
-**Returns:** `true` if no errors, `false` otherwise.
-
-```php
-$validator->validate($data, $rules);
-
-if ($validator->passed()) {
-    // Process valid data
-}
-```
+Passed to every rule.
 
 ---
 
-## errors()
+## RuleInterface
 
 ```php
-public function errors(): array
-```
-
-Get all validation errors.
-
-**Returns:** `array<string, list<array{rule: string, params?: string[]}>>` — Errors grouped by field
-
-```php
-$validator->validate($data, $rules);
-$errors = $validator->errors();
-
-// [
-//     'email' => [
-//         ['rule' => 'required'],
-//         ['rule' => 'email'],
-//     ],
-//     'password' => [
-//         ['rule' => 'min', 'params' => ['8']],
-//     ],
-// ]
-```
-
----
-
-## addCustomRule()
-
-```php
-public function addCustomRule(string $name, callable $callback): void
-```
-
-Register a custom validation rule.
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$name` | `string` | Rule name |
-| `$callback` | `callable` | Validation callback |
-
-**Callback signature:**
-
-```php
-function (mixed $value, ?string $param, array $data): bool
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$value` | `mixed` | Field value |
-| `$param` | `?string` | Rule parameter |
-| `$data` | `array` | All data |
-
-**Returns:** `true` if valid, `false` if invalid.
-
-**Example:**
-
-```php
-$validator->addCustomRule('even', function ($value, $param, $data) {
-    return (int)$value % 2 === 0;
-});
-
-$validator->addCustomRule('unique', function ($value, $param, $data) {
-    // $param = "table,column"
-    [$table, $column] = explode(',', $param);
-    // Check database...
-    return $isUnique;
-});
-
-// Usage
-$rules = [
-    'number' => 'even',
-    'email' => 'unique:users,email',
-];
-```
-
----
-
-## addRule()
-
-```php
-public function addRule(string $name, RuleInterface $rule): void
-```
-
-Register a rule implementing `Solo\Validator\RuleInterface`. Unlike `addCustomRule()` (callable returning bool), a `RuleInterface` rule returns the error structure directly — full control over `rule` name and `params`.
-
-**Parameters:**
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `$name` | `string` | Rule name |
-| `$rule` | `RuleInterface` | Rule instance |
-
-**RuleInterface contract:**
-
-```php
-namespace Solo\Validator;
-
 interface RuleInterface
 {
     /**
-     * @param array<string, mixed> $data Full payload (for cross-field rules)
-     * @return array{rule: string, params?: string[]}|null Null = pass; array = error
+     * @param list<string> $params
+     * @return array{rule: string, params?: list<string>}|null
      */
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array;
+    public function validate(mixed $value, array $params, Field $field): ?array;
 }
 ```
 
-**Example:**
+Return `null` to pass, or the error.
+
+## PresenceRule
 
 ```php
-use Solo\Validator\RuleInterface;
-
-final class EvenRule implements RuleInterface
+interface PresenceRule
 {
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
-    {
-        return ((int)$value) % 2 === 0 ? null : ['rule' => 'even'];
-    }
 }
-
-$validator->addRule('even', new EvenRule());
 ```
 
-Use `addRule()` when a rule needs constructor dependencies (database, cache, services) or when the error shape should differ from the simple `[rule, exploded params]` wrapping that `addCustomRule()` produces. For quick inline checks, `addCustomRule()` with a closure is more concise.
+Marks a rule that runs for absent fields and for blank values of `nullable` fields.
 
----
-
-## ValidatorInterface
-
-The Validator implements `Solo\Contracts\Validator\ValidatorInterface`:
+## ParameterizedRule
 
 ```php
-interface ValidatorInterface
+interface ParameterizedRule
 {
-    /**
-     * @param array<string, mixed> $data
-     * @param array<string, string> $rules
-     * @return array<string, list<array{rule: string, params?: string[]}>>
-     */
-    public function validate(array $data, array $rules): array;
+    public function checkParams(array $params): void;
 }
 ```
 
----
-
-## Complete Example
-
-```php
-use Solo\Validator\Validator;
-
-class UserController
-{
-    private Validator $validator;
-
-    public function __construct()
-    {
-        $this->validator = new Validator();
-
-        // Register custom rules
-        $this->validator->addCustomRule('unique_email', function ($value, $param, $data) {
-            return !User::where('email', $value)->exists();
-        });
-    }
-
-    public function register(array $data): array
-    {
-        $rules = [
-            'name' => 'required|min:2|max:50',
-            'email' => 'required|email|unique_email',
-            'password' => 'required|min:8',
-            'age' => 'nullable|integer|min_value:18',
-        ];
-
-        $this->validator->validate($data, $rules);
-
-        if ($this->validator->fails()) {
-            return [
-                'success' => false,
-                'errors' => $this->validator->errors(),
-            ];
-        }
-
-        // Create user...
-
-        return ['success' => true];
-    }
-}
-```
+Checks a rule's parameters once, when a rule string using it is compiled. Throw `InvalidRuleException` to reject them.
