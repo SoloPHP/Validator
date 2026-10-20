@@ -4,25 +4,23 @@ declare(strict_types=1);
 
 namespace Solo\Validator\Rules;
 
+use Solo\Validator\Field;
+use Solo\Validator\ParameterizedRule;
 use Solo\Validator\RuleInterface;
-use Solo\Validator\BuildsError;
-use Solo\Validator\CastsToString;
+use Solo\Validator\Value;
 
-final class LengthRule implements RuleInterface
+/**
+ * Exactly N elements of an array, or N characters of a string or number.
+ */
+final class LengthRule implements RuleInterface, ParameterizedRule
 {
-    use BuildsError;
-    use CastsToString;
-
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function checkParams(array $params): void
     {
-        if ($parameter === null) {
-            return null;
-        }
+        Params::expectInteger($params);
+    }
 
-        $string = $this->castToString($value);
-
-        return ($string === null || mb_strlen($string) !== (int)$parameter)
-            ? $this->buildError('length', $parameter)
-            : null;
+    public function validate(mixed $value, array $params, Field $field): ?array
+    {
+        return Value::size($value) === (int)$params[0] ? null : ['rule' => 'length', 'params' => $params];
     }
 }

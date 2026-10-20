@@ -4,28 +4,27 @@ declare(strict_types=1);
 
 namespace Solo\Validator\Rules;
 
+use Solo\Validator\Field;
+use Solo\Validator\ParameterizedRule;
 use Solo\Validator\RuleInterface;
-use Solo\Validator\BuildsError;
-use Solo\Validator\CastsToString;
+use Solo\Validator\Value;
 
-final class InRule implements RuleInterface
+/**
+ * The value, or every element of an array value, is one of the listed values.
+ */
+final class InRule implements RuleInterface, ParameterizedRule
 {
-    use BuildsError;
-    use CastsToString;
-
-    public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function checkParams(array $params): void
     {
-        if ($parameter === null) {
-            return ['rule' => 'in'];
-        }
+        Params::expectAtLeast(1, 'at least one value', $params);
+    }
 
-        $allowedSet = array_flip(explode(',', $parameter));
-        $items = is_array($value) ? $value : [$value];
-
-        foreach ($items as $item) {
-            $string = $this->castToString($item);
-            if ($string === null || !isset($allowedSet[$string])) {
-                return $this->buildError('in', $parameter);
+    public function validate(mixed $value, array $params, Field $field): ?array
+    {
+        foreach (is_array($value) ? $value : [$value] as $item) {
+            $string = Value::toString($item);
+            if ($string === null || !in_array($string, $params, true)) {
+                return ['rule' => 'in', 'params' => $params];
             }
         }
 

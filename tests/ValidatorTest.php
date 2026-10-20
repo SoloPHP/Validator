@@ -4,1066 +4,402 @@ declare(strict_types=1);
 
 namespace Solo\Validator\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Solo\Validator\Field;
+use Solo\Validator\InvalidRuleException;
+use Solo\Validator\ParameterizedRule;
 use Solo\Validator\PresenceRule;
 use Solo\Validator\RuleInterface;
+use Solo\Validator\Rules\LengthRule;
 use Solo\Validator\Validator;
 
-class ValidatorTest extends TestCase
+final class ValidatorTest extends TestCase
 {
-    private Validator $validator;
-
-    protected function setUp(): void
+    public function testValidDataHasNoErrors(): void
     {
-        $this->validator = new Validator();
-    }
-
-    public function testRequiredValidation(): void
-    {
-        $data = ['name' => ''];
-        $rules = ['name' => 'required'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('name', $errors);
-    }
-
-    public function testRequiredValidationWithNull(): void
-    {
-        $data = ['name' => null];
-        $rules = ['name' => 'required'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('name', $errors);
-    }
-
-    public function testRequiredValidationPasses(): void
-    {
-        $data = ['name' => 'John'];
-        $rules = ['name' => 'required'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testEmailValidation(): void
-    {
-        $data = ['email' => 'invalid-email'];
-        $rules = ['email' => 'email'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('email', $errors);
-    }
-
-    public function testEmailValidationPasses(): void
-    {
-        $data = ['email' => 'user@example.com'];
-        $rules = ['email' => 'email'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testMinValidation(): void
-    {
-        $data = ['password' => '123'];
-        $rules = ['password' => 'min:8'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('password', $errors);
-    }
-
-    public function testMinValidationPasses(): void
-    {
-        $data = ['password' => '12345678'];
-        $rules = ['password' => 'min:8'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testMaxValidation(): void
-    {
-        $data = ['username' => 'verylongusername'];
-        $rules = ['username' => 'max:10'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('username', $errors);
-    }
-
-    public function testMaxValidationPasses(): void
-    {
-        $data = ['username' => 'john'];
-        $rules = ['username' => 'max:10'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testLengthValidation(): void
-    {
-        $data = ['pin' => '123'];
-        $rules = ['pin' => 'length:4'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('pin', $errors);
-    }
-
-    public function testLengthValidationPasses(): void
-    {
-        $data = ['pin' => '1234'];
-        $rules = ['pin' => 'length:4'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testIntegerValidation(): void
-    {
-        $data = ['age' => 'not-a-number'];
-        $rules = ['age' => 'integer'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('age', $errors);
-    }
-
-    public function testIntegerValidationPasses(): void
-    {
-        $data = ['age' => 25];
-        $rules = ['age' => 'integer'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testStringValidation(): void
-    {
-        $data = ['name' => 123];
-        $rules = ['name' => 'string'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('name', $errors);
-    }
-
-    public function testStringValidationPasses(): void
-    {
-        $data = ['name' => 'John'];
-        $rules = ['name' => 'string'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testNumericValidation(): void
-    {
-        $data = ['price' => 'not-numeric'];
-        $rules = ['price' => 'numeric'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('price', $errors);
-    }
-
-    public function testNumericValidationPasses(): void
-    {
-        $data = ['price' => 99.99];
-        $rules = ['price' => 'numeric'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testArrayValidation(): void
-    {
-        $data = ['tags' => 'not-an-array'];
-        $rules = ['tags' => 'array'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('tags', $errors);
-    }
-
-    public function testArrayValidationPasses(): void
-    {
-        $data = ['tags' => ['php', 'validator']];
-        $rules = ['tags' => 'array'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testMinValueValidation(): void
-    {
-        $data = ['age' => 15];
-        $rules = ['age' => 'min_value:18'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('age', $errors);
-    }
-
-    public function testMinValueValidationPasses(): void
-    {
-        $data = ['age' => 25];
-        $rules = ['age' => 'min_value:18'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testMaxValueValidation(): void
-    {
-        $data = ['price' => 150];
-        $rules = ['price' => 'max_value:100'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('price', $errors);
-    }
-
-    public function testMaxValueValidationPasses(): void
-    {
-        $data = ['price' => 99];
-        $rules = ['price' => 'max_value:100'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testFilledValidation(): void
-    {
-        $data = ['description' => ''];
-        $rules = ['description' => 'filled'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('description', $errors);
-    }
-
-    public function testFilledValidationPasses(): void
-    {
-        $data = ['description' => 'Some description'];
-        $rules = ['description' => 'filled'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testFilledValidationWithNull(): void
-    {
-        $data = ['description' => null];
-        $rules = ['description' => 'filled'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('description', $errors);
-    }
-
-    public function testRegexValidation(): void
-    {
-        $data = ['username' => 'user@name'];
-        $rules = ['username' => 'regex:/^[a-zA-Z0-9_]+$/'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('username', $errors);
-    }
-
-    public function testRegexValidationPasses(): void
-    {
-        $data = ['username' => 'username123'];
-        $rules = ['username' => 'regex:/^[a-zA-Z0-9_]+$/'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testRegexValidationWithInvalidPattern(): void
-    {
-        $data = ['username' => 'test'];
-        $rules = ['username' => 'regex:invalid'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('username', $errors);
-    }
-
-    public function testNullableValidation(): void
-    {
-        $data = [];
-        $rules = ['optional_field' => 'nullable|email'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testNullableSkipsRulesForEmptyString(): void
-    {
-        $data = ['website' => ''];
-        $rules = ['website' => 'nullable|regex:/^https?:\/\//'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testNullableSkipsRulesForEmptyArray(): void
-    {
-        $data = ['tags' => []];
-        $rules = ['tags' => 'nullable|in:php,js'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testNullableSkipsCustomCallableRule(): void
-    {
-        $this->validator->addCustomRule('even', fn ($value) => (int)$value % 2 === 0);
-
-        $data = ['number' => ''];
-        $rules = ['number' => 'nullable|even'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testNullableDoesNotSkipNonBlankFalsyValue(): void
-    {
-        $data = ['code' => '0'];
-        $rules = ['code' => 'nullable|min:5'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'min', 'params' => ['5']]], $errors['code']);
-    }
-
-    public function testNullableDoesNotSkipRequired(): void
-    {
-        $data = ['name' => null];
-        $rules = ['name' => 'required|nullable'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'required']], $errors['name']);
-    }
-
-    public function testNullableDoesNotSkipFilled(): void
-    {
-        $data = ['description' => ''];
-        $rules = ['description' => 'filled|nullable'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'filled']], $errors['description']);
-    }
-
-    /**
-     * The reason PresenceRule exists: a custom conditional rule (here a minimal
-     * `required_if`) must still run on a blank value of a nullable field, where
-     * `nullable|required_if` is a meaningful, non-contradictory combination.
-     */
-    public function testNullableRunsCustomPresenceRule(): void
-    {
-        $requiredIf = new class implements RuleInterface, PresenceRule {
-            public function validate(mixed $value, ?string $parameter, array $data = []): ?array
-            {
-                [$field, $expected] = explode(',', (string)$parameter);
-                $isRequired = (string)($data[$field] ?? '') === $expected;
-                if ($isRequired && ($value === null || $value === '')) {
-                    return ['rule' => 'required_if', 'params' => [$field, $expected]];
-                }
-                return null;
-            }
-        };
-        $this->validator->addRule('required_if', $requiredIf);
-
-        // x=1 → password is required even though it is blank and nullable.
-        $errors = $this->validator->validate(
-            ['x' => '1', 'password' => ''],
-            ['password' => 'nullable|required_if:x,1']
+        $errors = (new Validator())->validate(
+            ['email' => 'user@example.com', 'age' => '42'],
+            ['email' => 'required|email', 'age' => 'integer|min_value:18'],
         );
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'required_if', 'params' => ['x', '1']]], $errors['password']);
 
-        // x=0 → not required → blank value is skipped by nullable and passes.
-        $errors = $this->validator->validate(
-            ['x' => '0', 'password' => ''],
-            ['password' => 'nullable|required_if:x,1']
+        $this->assertSame([], $errors);
+    }
+
+    public function testErrorsAreKeyedByFieldInRuleOrder(): void
+    {
+        $errors = (new Validator())->validate(
+            ['password' => '123', 'email' => 'invalid'],
+            ['email' => 'required|email', 'password' => 'required|min:8'],
         );
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
 
-    public function testMultipleRules(): void
-    {
-        $data = [
-            'email' => 'invalid-email',
-            'password' => '123',
-            'age' => 'not-a-number'
-        ];
-        $rules = [
-            'email' => 'required|email',
-            'password' => 'required|min:8',
-            'age' => 'required|integer|min_value:18'
-        ];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('email', $errors);
-        $this->assertArrayHasKey('password', $errors);
-        $this->assertArrayHasKey('age', $errors);
-    }
-
-    public function testCustomRule(): void
-    {
-        $this->validator->addCustomRule('even', function ($value) {
-            return (int)$value % 2 === 0;
-        });
-
-        $data = ['number' => 3];
-        $rules = ['number' => 'even'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('number', $errors);
-    }
-
-    public function testCustomRulePasses(): void
-    {
-        $this->validator->addCustomRule('even', function ($value) {
-            return (int)$value % 2 === 0;
-        });
-
-        $data = ['number' => 4];
-        $rules = ['number' => 'even'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testErrorsReturnStructuredFormat(): void
-    {
-        $data = [
-            'email' => 'invalid-email',
-            'password' => '123'
-        ];
-        $rules = [
-            'email' => 'email',
-            'password' => 'min:8'
-        ];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'email']], $errors['email']);
-        $this->assertSame([['rule' => 'min', 'params' => ['8']]], $errors['password']);
-    }
-
-    public function testInValidation(): void
-    {
-        $data = ['status' => 'pending'];
-        $rules = ['status' => 'in:active,inactive,draft'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('status', $errors);
-    }
-
-    public function testInValidationPasses(): void
-    {
-        $data = ['status' => 'active'];
-        $rules = ['status' => 'in:active,inactive,draft'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testInValidationWithoutParameter(): void
-    {
-        $data = ['status' => 'active'];
-        $rules = ['status' => 'in'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('status', $errors);
-    }
-
-    public function testInValidationWithArrayPasses(): void
-    {
-        $data = ['tags' => ['php', 'javascript']];
-        $rules = ['tags' => 'in:php,javascript,python,go'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testInValidationWithArrayFails(): void
-    {
-        $data = ['tags' => ['php', 'ruby']];
-        $rules = ['tags' => 'in:php,javascript,python,go'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('tags', $errors);
-    }
-
-    public function testBooleanValidation(): void
-    {
-        $data = ['is_active' => 'invalid'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('is_active', $errors);
-    }
-
-    public function testBooleanValidationWithBool(): void
-    {
-        $data = ['is_active' => true];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testBooleanValidationWithString(): void
-    {
-        $data = ['is_active' => 'yes'];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testBooleanValidationWithInt(): void
-    {
-        $data = ['is_active' => 1];
-        $rules = ['is_active' => 'boolean'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testErrorsReturnStructuredFormatWithParams(): void
-    {
-        $data = ['status' => 'pending'];
-        $rules = ['status' => 'in:active,inactive'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'in', 'params' => ['active', 'inactive']]], $errors['status']);
-    }
-
-    public function testErrorsReturnStructuredFormatWithoutParams(): void
-    {
-        $data = ['name' => ''];
-        $rules = ['name' => 'required'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'required']], $errors['name']);
-    }
-
-    public function testMultipleErrorsPerField(): void
-    {
-        $data = ['age' => 'abc'];
-        $rules = ['age' => 'integer|min_value:18'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertCount(2, $errors['age']);
-        $this->assertSame('integer', $errors['age'][0]['rule']);
-        $this->assertSame('numeric', $errors['age'][1]['rule']);
-    }
-
-    public function testCustomRuleErrorStructuredFormat(): void
-    {
-        $this->validator->addCustomRule('even', function ($value) {
-            return (int)$value % 2 === 0;
-        });
-
-        $data = ['number' => 3];
-        $rules = ['number' => 'even'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertSame([['rule' => 'even']], $errors['number']);
-    }
-
-    public function testCustomRuleWithParamErrorStructuredFormat(): void
-    {
-        $this->validator->addCustomRule('divisible', function ($value, $param) {
-            return (int)$value % (int)$param === 0;
-        });
-
-        $data = ['number' => 7];
-        $rules = ['number' => 'divisible:3'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertSame([['rule' => 'divisible', 'params' => ['3']]], $errors['number']);
-    }
-
-    public function testDateValidation(): void
-    {
-        $data = ['birth_date' => 'not-a-date'];
-        $rules = ['birth_date' => 'date'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('birth_date', $errors);
-    }
-
-    public function testDateValidationPasses(): void
-    {
-        $data = ['birth_date' => '2024-01-15'];
-        $rules = ['birth_date' => 'date'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testDateValidationWithNumericTimestamp(): void
-    {
-        $data = ['timestamp' => 1705334400];
-        $rules = ['timestamp' => 'date'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testDateValidationWithNonStringNonNumeric(): void
-    {
-        $data = ['birth_date' => ['2024-01-15']];
-        $rules = ['birth_date' => 'date'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('birth_date', $errors);
-    }
-
-    public function testDateWithFormatValidation(): void
-    {
-        $data = ['event_date' => '15-01-2024'];
-        $rules = ['event_date' => 'date:Y-m-d'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('event_date', $errors);
-    }
-
-    public function testDateWithFormatValidationPasses(): void
-    {
-        $data = ['event_date' => '2024-01-15'];
-        $rules = ['event_date' => 'date:Y-m-d'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testArrayWithAllowedKeys(): void
-    {
-        $data = ['user' => ['name' => 'John', 'email' => 'john@example.com']];
-        $rules = ['user' => 'array:name,email'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testArrayWithInvalidKeys(): void
-    {
-        $data = ['user' => ['name' => 'John', 'password' => 'secret']];
-        $rules = ['user' => 'array:name,email'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('user', $errors);
-    }
-
-    public function testPhoneValidation(): void
-    {
-        $data = ['phone' => 'not-a-phone'];
-        $rules = ['phone' => 'phone:US'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('phone', $errors);
-    }
-
-    public function testPhoneValidationPasses(): void
-    {
-        $data = ['phone' => '+14155552671'];
-        $rules = ['phone' => 'phone:US'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testPhoneValidationInvalidNumber(): void
-    {
-        $data = ['phone' => '+14155'];
-        $rules = ['phone' => 'phone:US'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('phone', $errors);
-    }
-
-    public function testPhoneWithoutRegionRejectsNationalNumber(): void
-    {
-        $data = ['phone' => '4155552671'];
-        $rules = ['phone' => 'phone'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertSame([['rule' => 'phone']], $errors['phone']);
-    }
-
-    public function testPhoneWithoutRegionAcceptsInternationalNumber(): void
-    {
-        $data = ['phone' => '+14155552671'];
-        $rules = ['phone' => 'phone'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testPhoneWithUnknownRegionRejectsNationalNumber(): void
-    {
-        $data = ['phone' => '4155552671'];
-        $rules = ['phone' => 'phone:XX'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertSame([['rule' => 'phone']], $errors['phone']);
-    }
-
-    public function testPhoneWithUnknownCountryCode(): void
-    {
-        $data = ['phone' => '+999 1234567'];
-        $rules = ['phone' => 'phone:US'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertSame([['rule' => 'phone']], $errors['phone']);
-    }
-
-    public function testMaxValueValidationWithNonNumeric(): void
-    {
-        $data = ['price' => 'not-a-number'];
-        $rules = ['price' => 'max_value:100'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertArrayHasKey('price', $errors);
-    }
-
-    public function testErrorsMethod(): void
-    {
-        $data = ['email' => 'invalid'];
-        $rules = ['email' => 'email'];
-
-        $this->validator->validate($data, $rules);
-
-        $errors = $this->validator->errors();
-        $this->assertIsArray($errors);
-        $this->assertArrayHasKey('email', $errors);
-    }
-
-    public function testUnknownRuleIsIgnored(): void
-    {
-        $data = ['field' => 'value'];
-        $rules = ['field' => 'unknown_rule'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testUuidValidation(): void
-    {
-        $data = ['id' => 'not-a-uuid'];
-        $rules = ['id' => 'uuid'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'uuid']], $errors['id']);
-    }
-
-    public function testUuidValidationPasses(): void
-    {
-        $data = ['id' => '550e8400-e29b-41d4-a716-446655440000'];
-        $rules = ['id' => 'uuid'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testUuidValidationWithUppercase(): void
-    {
-        $data = ['id' => '550E8400-E29B-41D4-A716-446655440000'];
-        $rules = ['id' => 'uuid'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
-    }
-
-    public function testUuidValidationWithNonString(): void
-    {
-        $data = ['id' => 12345];
-        $rules = ['id' => 'uuid'];
-
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->fails());
-        $this->assertSame([['rule' => 'uuid']], $errors['id']);
+        $this->assertSame([
+            'email' => [['rule' => 'email']],
+            'password' => [['rule' => 'min', 'params' => ['8']]],
+        ], $errors);
     }
 
     public function testWhitespaceAroundRulesIsIgnored(): void
     {
-        $data = ['email' => 'not-an-email'];
-        $rules = ['email' => ' required | email '];
+        $errors = (new Validator())->validate(['email' => 'invalid'], ['email' => ' required | email ']);
 
-        $errors = $this->validator->validate($data, $rules);
+        $this->assertSame(['email' => [['rule' => 'email']]], $errors);
+    }
 
-        $this->assertSame([['rule' => 'email']], $errors['email']);
+    public function testEmptySegmentsAreSkipped(): void
+    {
+        $errors = (new Validator())->validate(['name' => ''], ['name' => '|required||']);
+
+        $this->assertSame(['name' => [['rule' => 'required']]], $errors);
+    }
+
+    public function testParamsFollowTheFirstColonAndSplitOnCommas(): void
+    {
+        $errors = (new Validator())->validate(['time' => '09:00'], ['time' => 'in:10:00,12:30']);
+
+        $this->assertSame(['time' => [['rule' => 'in', 'params' => ['10:00', '12:30']]]], $errors);
+    }
+
+    public function testNullableInsideAParameterListIsNotTheFlag(): void
+    {
+        $errors = (new Validator())->validate(['status' => null], ['status' => 'in:nullable,active']);
+
+        $this->assertSame(['status' => [['rule' => 'in', 'params' => ['nullable', 'active']]]], $errors);
+    }
+
+    public function testUnknownRuleThrows(): void
+    {
+        $this->expectException(InvalidRuleException::class);
+        $this->expectExceptionMessage("Unknown validation rule 'requird' in 'requird|email'");
+
+        (new Validator())->validate(['email' => 'user@example.com'], ['email' => 'requird|email']);
+    }
+
+    #[DataProvider('invalidParams')]
+    public function testInvalidParamsThrow(string $rules, string $message): void
+    {
+        $this->expectException(InvalidRuleException::class);
+        $this->expectExceptionMessage($message);
+
+        (new Validator())->validate(['field' => 'value'], ['field' => $rules]);
+    }
+
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function invalidParams(): iterable
+    {
+        yield 'min: not a number' => ['min:abc', "Invalid rule 'min:abc': expects one non-negative integer."];
+        yield 'max: missing' => ['max', "Invalid rule 'max': expects one non-negative integer."];
+        yield 'length: negative' => ['length:-1', "Invalid rule 'length:-1': expects one non-negative integer."];
+        yield 'min_value: not a number' => ['min_value:x', "Invalid rule 'min_value:x': expects one number."];
+        yield 'min_value: infinite' => ['min_value:1e400', "Invalid rule 'min_value:1e400': expects one number."];
+        yield 'max_value: two numbers' => ['max_value:1,2', "Invalid rule 'max_value:1,2': expects one number."];
+        yield 'in: no values' => ['in:', "Invalid rule 'in:': expects at least one value."];
+        yield 'regex: invalid pattern' => ['regex:invalid', "Invalid rule 'regex:invalid': expects a valid PCRE pattern."];
+        yield 'phone: unknown region' => ['phone:XX', "Invalid rule 'phone:XX': expects an optional region code such as US."];
+        yield 'required_if: no value' => [
+            'required_if:type',
+            "Invalid rule 'required_if:type': expects a field and at least one value.",
+        ];
+        yield 'required_without: no field' => ['required_without', "Invalid rule 'required_without': expects at least one field."];
+    }
+
+    public function testParamErrorNamesTheRuleAsWrittenAndItsRuleString(): void
+    {
+        $this->expectException(InvalidRuleException::class);
+        $this->expectExceptionMessage("Invalid rule 'size:abc' in 'required|size:abc': expects one non-negative integer.");
+
+        (new Validator(['size' => new LengthRule()]))->validate(['code' => 'abc'], ['code' => 'required|size:abc']);
+    }
+
+    public function testInvalidParamsThrowEvenWhenTheRuleIsNotReached(): void
+    {
+        $this->expectException(InvalidRuleException::class);
+
+        // `required` fails and ends the field before min:abc would run.
+        (new Validator())->validate(['name' => ''], ['name' => 'required|min:abc']);
+    }
+
+    public function testAbsentFieldIsCheckedByPresenceRulesOnly(): void
+    {
+        $validator = new Validator();
+
+        $this->assertSame([], $validator->validate([], ['email' => 'email|min:5']));
+        $this->assertSame(
+            ['email' => [['rule' => 'required']]],
+            $validator->validate([], ['email' => 'required|email|min:5']),
+        );
+    }
+
+    #[DataProvider('blankValues')]
+    public function testNullableBlankValueIsCheckedByPresenceRulesOnly(mixed $blank): void
+    {
+        $validator = new Validator();
+
+        $this->assertSame([], $validator->validate(['site' => $blank], ['site' => 'nullable|regex:/^https?:/']));
+        $this->assertSame(
+            ['site' => [['rule' => 'required']]],
+            $validator->validate(['site' => $blank], ['site' => 'nullable|required|regex:/^https?:/']),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function blankValues(): iterable
+    {
+        yield 'null' => [null];
+        yield 'empty string' => [''];
+        yield 'empty array' => [[]];
+    }
+
+    public function testWhitespaceIsNotBlankForNullable(): void
+    {
+        $validator = new Validator();
+
+        $this->assertSame(
+            ['email' => [['rule' => 'email']]],
+            $validator->validate(['email' => '   '], ['email' => 'nullable|email']),
+        );
+        $this->assertSame(
+            ['name' => [['rule' => 'required']]],
+            $validator->validate(['name' => '   '], ['name' => 'nullable|required']),
+        );
     }
 
     public function testNullableIsRecognizedWithWhitespace(): void
     {
-        $data = ['code' => ''];
-        $rules = ['code' => 'min:3 | nullable'];
+        $errors = (new Validator())->validate(['code' => ''], ['code' => 'min:3 | nullable']);
 
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
+        $this->assertSame([], $errors);
     }
 
-    public function testEmptyRuleSegmentsAreSkipped(): void
+    public function testNullableDoesNotSkipFalsyValues(): void
     {
-        $data = ['name' => ''];
-        $rules = ['name' => '|required||'];
+        $errors = (new Validator())->validate(['code' => '0'], ['code' => 'nullable|min:5']);
 
-        $errors = $this->validator->validate($data, $rules);
-
-        $this->assertSame([['rule' => 'required']], $errors['name']);
+        $this->assertSame(['code' => [['rule' => 'min', 'params' => ['5']]]], $errors);
     }
 
-    public function testStringRulesRejectArraysWithoutWarnings(): void
+    public function testPresentBlankValueWithoutNullableIsValidated(): void
     {
-        $data = ['pin' => ['1234'], 'slug' => ['a'], 'tags' => [['php']]];
-        $rules = ['pin' => 'length:4', 'slug' => 'regex:/a/', 'tags' => 'in:php,js'];
+        $validator = new Validator();
 
-        $errors = $this->validateWithStrictErrors($data, $rules);
-
-        $this->assertSame([
-            'pin' => [['rule' => 'length', 'params' => ['4']]],
-            'slug' => [['rule' => 'regex']],
-            'tags' => [['rule' => 'in', 'params' => ['php', 'js']]],
-        ], $errors);
+        $this->assertSame(['email' => [['rule' => 'email']]], $validator->validate(['email' => null], ['email' => 'email']));
+        $this->assertSame(['email' => [['rule' => 'email']]], $validator->validate(['email' => ''], ['email' => 'email']));
     }
 
-    public function testStringRulesRejectObjectsWithoutToString(): void
+    public function testFirstFailingRuleEndsTheField(): void
     {
-        $object = new \stdClass();
-        $data = ['pin' => $object, 'name' => $object, 'title' => $object, 'slug' => $object, 'status' => $object];
-        $rules = [
-            'pin' => 'length:3',
-            'name' => 'min:1',
-            'title' => 'max:3',
-            'slug' => 'regex:/a/',
-            'status' => 'in:a,b',
-        ];
+        $validator = new Validator();
 
-        $errors = $this->validateWithStrictErrors($data, $rules);
-
-        $this->assertSame([
-            'pin' => [['rule' => 'length', 'params' => ['3']]],
-            'name' => [['rule' => 'min', 'params' => ['1']]],
-            'title' => [['rule' => 'max', 'params' => ['3']]],
-            'slug' => [['rule' => 'regex']],
-            'status' => [['rule' => 'in', 'params' => ['a', 'b']]],
-        ], $errors);
+        $this->assertSame(
+            ['age' => [['rule' => 'integer']]],
+            $validator->validate(['age' => 'abc'], ['age' => 'integer|min_value:18']),
+        );
+        $this->assertSame(
+            ['email' => [['rule' => 'required']]],
+            $validator->validate(['email' => ''], ['email' => 'required|email|min:5']),
+        );
     }
 
-    public function testStringRulesReadStringableObjects(): void
+    public function testClosureRules(): void
     {
-        $stringable = new class {
-            public function __toString(): string
+        $validator = new Validator([
+            'even' => fn (mixed $value): bool => is_int($value) && $value % 2 === 0,
+            'divisible_by' => fn (mixed $value, array $params): bool => is_int($value) && $value % (int)$params[0] === 0,
+        ]);
+
+        $this->assertSame([], $validator->validate(['n' => 4], ['n' => 'even']));
+        $this->assertSame(['n' => [['rule' => 'even']]], $validator->validate(['n' => 3], ['n' => 'even']));
+        $this->assertSame(
+            ['n' => [['rule' => 'divisible_by', 'params' => ['5']]]],
+            $validator->validate(['n' => 7], ['n' => 'divisible_by:5']),
+        );
+    }
+
+    public function testAnyCallableIsARule(): void
+    {
+        $odd = new class {
+            public function __invoke(mixed $value): bool
             {
-                return 'abc';
+                return is_int($value) && $value % 2 === 1;
             }
         };
-        $data = ['code' => $stringable];
-        $rules = ['code' => 'length:3|min:3|max:3|regex:/^abc$/|in:abc,def'];
+        $validator = new Validator(['even' => [self::class, 'isEven'], 'odd' => $odd]);
 
-        $errors = $this->validateWithStrictErrors($data, $rules);
+        $this->assertSame([], $validator->validate(['a' => 2, 'b' => 3], ['a' => 'even', 'b' => 'odd']));
+        $this->assertSame(
+            ['a' => [['rule' => 'even']], 'b' => [['rule' => 'odd']]],
+            $validator->validate(['a' => 3, 'b' => 2], ['a' => 'even', 'b' => 'odd']),
+        );
+    }
 
-        $this->assertTrue($this->validator->passed());
-        $this->assertEmpty($errors);
+    public static function isEven(mixed $value): bool
+    {
+        return is_int($value) && $value % 2 === 0;
+    }
+
+    public function testRuleThatIsNotCallableFailsOnConstruction(): void
+    {
+        $this->expectException(\TypeError::class);
+
+        new Validator(['even' => 'no_such_function']);
+    }
+
+    #[DataProvider('unreachableNames')]
+    public function testRuleNameNoRuleStringCanReferToIsRejected(string $name): void
+    {
+        $this->expectException(InvalidRuleException::class);
+        $this->expectExceptionMessage("Cannot register rule '{$name}'");
+
+        new Validator([$name => fn (): bool => true]);
     }
 
     /**
-     * A rule may validate a nested payload with the same validator instance
-     * (e.g. one injected as ValidatorInterface): the outer call keeps its own
-     * errors and does not pick up the nested ones.
+     * @return iterable<string, array{string}>
      */
-    public function testNestedValidateCallKeepsOuterErrors(): void
+    public static function unreachableNames(): iterable
     {
-        $address = new class ($this->validator) implements RuleInterface {
-            public function __construct(private Validator $validator)
-            {
-            }
+        yield 'reserved nullable' => ['nullable'];
+        yield 'empty' => [''];
+        yield 'colon' => ['date:iso'];
+        yield 'pipe' => ['a|b'];
+        yield 'surrounding whitespace' => [' padded'];
+    }
 
-            public function validate(mixed $value, ?string $parameter, array $data = []): ?array
+    public function testClassRuleReturnsItsOwnError(): void
+    {
+        $strength = new class implements RuleInterface {
+            public function validate(mixed $value, array $params, Field $field): ?array
             {
-                $errors = $this->validator->validate(is_array($value) ? $value : [], ['street' => 'required']);
-                return $errors === [] ? null : ['rule' => 'address'];
+                return is_string($value) && strlen($value) >= 8
+                    ? null
+                    : ['rule' => 'password_strength', 'params' => ['too_short']];
             }
         };
-        $this->validator->addRule('address', $address);
 
-        $errors = $this->validator->validate(
+        $errors = (new Validator(['strong' => $strength]))->validate(['password' => 'abc'], ['password' => 'strong']);
+
+        $this->assertSame(['password' => [['rule' => 'password_strength', 'params' => ['too_short']]]], $errors);
+    }
+
+    public function testCustomRuleOverridesBuiltInRule(): void
+    {
+        $validator = new Validator(['email' => fn (mixed $value): bool => $value === 'admin']);
+
+        $this->assertSame([], $validator->validate(['login' => 'admin'], ['login' => 'email']));
+    }
+
+    public function testRuleSeesItsFieldAndThePayload(): void
+    {
+        $validator = new Validator([
+            'confirmed' => fn (mixed $value, array $params, Field $field): bool
+                => $value === ($field->data[$field->name . '_confirmation'] ?? null),
+        ]);
+
+        $this->assertSame([], $validator->validate(
+            ['password' => 'secret', 'password_confirmation' => 'secret'],
+            ['password' => 'confirmed'],
+        ));
+        $this->assertSame(['password' => [['rule' => 'confirmed']]], $validator->validate(
+            ['password' => 'secret', 'password_confirmation' => 'other'],
+            ['password' => 'confirmed'],
+        ));
+    }
+
+    public function testCustomPresenceRuleRunsOnNullableBlankValue(): void
+    {
+        $requiredForAdmin = new class implements RuleInterface, PresenceRule {
+            public function validate(mixed $value, array $params, Field $field): ?array
+            {
+                $required = ($field->data['role'] ?? null) === 'admin';
+                return $required && ($value === null || $value === '') ? ['rule' => 'required_for_admin'] : null;
+            }
+        };
+        $validator = new Validator(['required_for_admin' => $requiredForAdmin]);
+        $rules = ['token' => 'nullable|required_for_admin'];
+
+        $this->assertSame(
+            ['token' => [['rule' => 'required_for_admin']]],
+            $validator->validate(['role' => 'admin', 'token' => ''], $rules),
+        );
+        $this->assertSame([], $validator->validate(['role' => 'user', 'token' => ''], $rules));
+    }
+
+    public function testCustomParameterizedRuleIsCheckedOnCompile(): void
+    {
+        $unique = new class implements RuleInterface, ParameterizedRule {
+            public function checkParams(array $params): void
+            {
+                if (count($params) !== 2) {
+                    throw InvalidRuleException::invalidParams('a table and a column');
+                }
+            }
+
+            public function validate(mixed $value, array $params, Field $field): ?array
+            {
+                return null;
+            }
+        };
+
+        $this->expectException(InvalidRuleException::class);
+        $this->expectExceptionMessage("Invalid rule 'unique:users': expects a table and a column.");
+
+        (new Validator(['unique' => $unique]))->validate([], ['email' => 'unique:users']);
+    }
+
+    public function testRepeatedCallsAreIndependent(): void
+    {
+        $validator = new Validator();
+        $rules = ['qty' => 'required|integer|min_value:1'];
+
+        $this->assertSame(['qty' => [['rule' => 'min_value', 'params' => ['1']]]], $validator->validate(['qty' => '0'], $rules));
+        $this->assertSame([], $validator->validate(['qty' => '2'], $rules));
+        $this->assertSame(['qty' => [['rule' => 'required']]], $validator->validate([], $rules));
+    }
+
+    public function testCompiledRuleStringsAreBounded(): void
+    {
+        $validator = new Validator();
+        for ($i = 0; $i <= 1000; $i++) {
+            $validator->validate(['name' => 'John'], ['name' => "required|max:{$i}"]);
+        }
+
+        $compiled = (new \ReflectionProperty(Validator::class, 'compiled'))->getValue($validator);
+        $this->assertCount(1000, $compiled);
+        $this->assertArrayNotHasKey('required|max:0', $compiled);
+        $this->assertSame(
+            ['name' => [['rule' => 'max', 'params' => ['0']]]],
+            $validator->validate(['name' => 'John'], ['name' => 'required|max:0']),
+        );
+    }
+
+    public function testRuleMayValidateANestedPayloadWithTheSameInstance(): void
+    {
+        $validator = new Validator([
+            'address' => function (mixed $value) use (&$validator): bool {
+                return $validator->validate(is_array($value) ? $value : [], ['street' => 'required']) === [];
+            },
+        ]);
+
+        $errors = $validator->validate(
             ['name' => '', 'address' => ['street' => '']],
-            ['name' => 'required', 'address' => 'address']
+            ['name' => 'required', 'address' => 'address'],
         );
 
-        $expected = [
+        $this->assertSame([
             'name' => [['rule' => 'required']],
             'address' => [['rule' => 'address']],
-        ];
-        $this->assertSame($expected, $errors);
-        $this->assertSame($expected, $this->validator->errors());
-        $this->assertTrue($this->validator->fails());
+        ], $errors);
     }
 
-    /**
-     * Validate the way an application with a framework error handler does
-     * (Symfony, Laravel): a PHP warning becomes an exception, i.e. a 500.
-     *
-     * @param array<string, mixed> $data
-     * @param array<string, string> $rules
-     * @return array<string, list<array{rule: string, params?: string[]}>>
-     */
-    private function validateWithStrictErrors(array $data, array $rules): array
+    public function testIntegerLikeFieldNames(): void
     {
-        set_error_handler(static function (int $errno, string $errstr): bool {
-            if (!(error_reporting() & $errno)) {
-                return false; // silenced with @
-            }
-            throw new \ErrorException($errstr, 0, $errno);
-        });
+        // PHP stores the key '0' as the int 0.
+        $errors = (new Validator())->validate(['0' => ''], ['0' => 'required']);
 
-        try {
-            return $this->validator->validate($data, $rules);
-        } finally {
-            restore_error_handler();
-        }
+        $this->assertSame([0 => [['rule' => 'required']]], $errors);
     }
 }
