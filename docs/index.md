@@ -19,7 +19,7 @@ hero:
 features:
   - icon: ✅
     title: Built-in Rules
-    details: required, required_if / with / without, email, phone, uuid, date, min, max, in, regex and more.
+    details: required, required_if / with / without, prohibited_if, present, email, phone, uuid, date, min, max, in, regex and more.
   - icon: 🛑
     title: Fails Fast
     details: An unknown rule or a bad parameter throws on first use instead of silently validating nothing.

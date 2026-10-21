@@ -92,7 +92,7 @@ This format is ideal for building error messages on the client side or for i18n/
 
 | The field is… | Rules that run |
 |---|---|
-| absent from the data | presence rules only (`required`, `filled`, `required_if`, …) |
+| absent from the data | presence rules only (`required`, `filled`, `present`, `required_if`, …) |
 | blank (`null`, `''`, `[]`) and the rules contain `nullable` | presence rules only |
 | anything else | every rule, until the first one fails |
 
