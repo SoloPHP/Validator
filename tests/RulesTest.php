@@ -41,6 +41,8 @@ final class RulesTest extends TestCase
         yield 'required: null' => ['required', null, ['rule' => 'required']];
         yield 'required: empty array' => ['required', [], ['rule' => 'required']];
 
+        yield 'present: empty array' => ['present', [], null];
+
         yield 'filled: value' => ['filled', 'x', null];
         yield 'filled: whitespace' => ['filled', ' ', ['rule' => 'filled']];
         yield 'filled: null' => ['filled', null, ['rule' => 'filled']];
@@ -262,5 +264,44 @@ final class RulesTest extends TestCase
 
         yield 'filled: absent' => [[], ['bio' => 'filled|min:3'], []];
         yield 'filled: present and blank' => [['bio' => ''], ['bio' => 'filled|min:3'], ['bio' => [['rule' => 'filled']]]];
+
+        yield 'present: absent' => [[], ['ids' => 'present|array'], ['ids' => [['rule' => 'present']]]];
+        yield 'present: null under nullable' => [['note' => null], ['note' => 'nullable|present|string'], []];
+
+        $prohibitedIf = ['company' => 'prohibited_if:type,person'];
+        yield 'prohibited_if: condition met and filled' => [['type' => 'person', 'company' => 'Acme'], $prohibitedIf, [
+            'company' => [$error('prohibited_if', 'type', 'person')],
+        ]];
+        yield 'prohibited_if: condition met and blank' => [['type' => 'person', 'company' => ''], $prohibitedIf, []];
+        yield 'prohibited_if: whitespace is not filled' => [['type' => 'person', 'company' => '  '], $prohibitedIf, []];
+        yield 'prohibited_if: condition met and absent' => [['type' => 'person'], $prohibitedIf, []];
+        yield 'prohibited_if: condition not met' => [['type' => 'company', 'company' => 'Acme'], $prohibitedIf, []];
+        yield 'prohibited_if: false is a value' => [['type' => 'person', 'company' => false], $prohibitedIf, [
+            'company' => [$error('prohibited_if', 'type', 'person')],
+        ]];
+        yield 'prohibited_if: checkbox "on" is true' => [
+            ['anonymous' => 'on', 'name' => 'John'],
+            ['name' => 'prohibited_if:anonymous,true'],
+            ['name' => [$error('prohibited_if', 'anonymous', 'true')]],
+        ];
+        yield 'prohibited_unless: not excepted' => [
+            ['type' => 'person', 'company' => 'Acme'],
+            ['company' => 'prohibited_unless:type,company'],
+            ['company' => [$error('prohibited_unless', 'type', 'company')]],
+        ];
+        yield 'prohibited_unless: excepted' => [
+            ['type' => 'company', 'company' => 'Acme'],
+            ['company' => 'prohibited_unless:type,company'],
+            [],
+        ];
+
+        $exclusive = ['name' => 'nullable|string|required_if:type,company|prohibited_if:type,person'];
+        yield 'required_if with prohibited_if: required' => [['type' => 'company', 'name' => ''], $exclusive, [
+            'name' => [$error('required_if', 'type', 'company')],
+        ]];
+        yield 'required_if with prohibited_if: prohibited' => [['type' => 'person', 'name' => 'Acme'], $exclusive, [
+            'name' => [$error('prohibited_if', 'type', 'person')],
+        ]];
+        yield 'required_if with prohibited_if: neither' => [['type' => 'person'], $exclusive, []];
     }
 }
