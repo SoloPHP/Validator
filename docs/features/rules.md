@@ -26,6 +26,23 @@ Field may be absent; when present, it must be filled.
 $rules = ['description' => 'filled'];
 ```
 
+### present
+
+Field must be in the data; any value passes, `null`, `''` and `[]` included.
+
+```php
+$rules = ['tags' => 'present|array'];
+
+// Valid:   ['tags' => []]
+// Invalid: []  — the key is missing
+```
+
+For a value the client has to give explicitly even when it is empty: an empty list that clears a collection must not be confused with a list nobody sent.
+
+::: warning With Request-Handler
+`present` needs [solophp/request-handler](https://github.com/SoloPHP/Request-Handler) 4.1 or later. Earlier versions hand an absent field to the validator only when one of its rules starts with `required`, so `present` alone never sees the missing key.
+:::
+
 ### required_if
 
 Field must be filled when another field equals one of the given values.
@@ -98,6 +115,37 @@ Only blank values are skipped. `'0'`, `0`, `false` and whitespace such as `'   '
 
 ---
 
+## Prohibition Rules
+
+A blank or absent field passes them, so they need not be presence rules.
+
+### prohibited_if
+
+Field must not be filled when another field equals one of the given values.
+
+```php
+$rules = [
+    'company' => 'prohibited_if:type,individual',
+    'reason' => 'prohibited_if:status,approved,draft',
+];
+```
+
+The other field is compared the way [`required_if`](#required-if) compares it. Together they describe a field only one kind of record has:
+
+```php
+$rules = ['company' => 'nullable|string|required_if:type,company|prohibited_if:type,individual'];
+```
+
+### prohibited_unless
+
+Field must not be filled unless another field equals one of the given values.
+
+```php
+$rules = ['discount_reason' => 'prohibited_unless:discount,true'];
+```
+
+---
+
 ## Type Rules
 
 ### string
@@ -156,6 +204,10 @@ The integer, numeric and boolean rules accept exactly what Request-Handler 4 con
 ## Size Rules
 
 Sizes count the elements of an array, or the characters (multibyte-aware) of a string, int, float or `Stringable`. `null` has size 0; a bool or another object fails.
+
+::: warning Numbers are sized by their characters
+`max:100` accepts 99999999 and `min:1` accepts 0: they count digits. Bound a number's value with [`min_value` / `max_value`](#numeric-value-rules).
+:::
 
 ### min
 
@@ -307,12 +359,15 @@ Values are compared by their string form, exactly. A bool, `null`, a nested arra
 |------|------------|-------------|
 | `required` | — | Must be filled |
 | `filled` | — | Must be filled if present |
+| `present` | — | Must be in the data, any value |
 | `required_if` | `field,value,…` | Required when another field has one of the values |
 | `required_unless` | `field,value,…` | Required unless another field has one of the values |
 | `required_with` | `field,…` | Required when any listed field is filled |
 | `required_with_all` | `field,…` | Required when all listed fields are filled |
 | `required_without` | `field,…` | Required when any listed field is not filled |
 | `required_without_all` | `field,…` | Required when no listed field is filled |
+| `prohibited_if` | `field,value,…` | Must not be filled when another field has one of the values |
+| `prohibited_unless` | `field,value,…` | Must not be filled unless another field has one of the values |
 | `nullable` | — | Blank (`null` / `''` / `[]`) runs presence rules only |
 | `string` | — | Must be a string |
 | `integer` | — | Must be an integer |
