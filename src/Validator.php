@@ -156,6 +156,7 @@ final class Validator implements ValidatorInterface
     {
         return match ($name) {
             'required' => new Rules\RequiredRule(),
+            'present' => new Rules\PresentRule(),
             'required_if' => new Rules\RequiredIfRule(),
             'required_unless' => new Rules\RequiredIfRule(unless: true),
             'required_with' => new Rules\RequiredWithRule(),
@@ -163,6 +164,8 @@ final class Validator implements ValidatorInterface
             'required_without' => new Rules\RequiredWithRule(without: true),
             'required_without_all' => new Rules\RequiredWithRule(all: true, without: true),
             'filled' => new Rules\FilledRule(),
+            'prohibited_if' => new Rules\ProhibitedIfRule(),
+            'prohibited_unless' => new Rules\ProhibitedIfRule(unless: true),
             'string' => new Rules\StringRule(),
             'integer' => new Rules\IntegerRule(),
             'numeric' => new Rules\NumericRule(),

@@ -64,7 +64,7 @@ $handler = new RequestHandler(new Validator([
 ]));
 ```
 
-The handler passes each DTO's `#[Validate]` strings as they are written; the validator reads them with the same grammar as the handler's own rule parser.
+The handler passes each DTO's `#[Validate]` strings as they are written; the validator reads them with the same grammar as the handler's own rule parser. From Request-Handler 4.1 it also passes the rules of an absent field, without a value — which [`present`](/features/rules#present) needs.
 
 ## Next Steps
 

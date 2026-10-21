@@ -103,6 +103,14 @@ final class ValidatorTest extends TestCase
             "Invalid rule 'required_if:type': expects a field and at least one value.",
         ];
         yield 'required_without: no field' => ['required_without', "Invalid rule 'required_without': expects at least one field."];
+        yield 'prohibited_if: no value' => [
+            'prohibited_if:type',
+            "Invalid rule 'prohibited_if:type': expects a field and at least one value.",
+        ];
+        yield 'prohibited_unless: no field' => [
+            'prohibited_unless',
+            "Invalid rule 'prohibited_unless': expects a field and at least one value.",
+        ];
     }
 
     public function testParamErrorNamesTheRuleAsWrittenAndItsRuleString(): void
