@@ -9,6 +9,7 @@ use Solo\RequestHandler\Exceptions\ValidationException;
 use Solo\RequestHandler\Request;
 use Solo\RequestHandler\RequestHandler;
 use Solo\Validator\InvalidRuleException;
+use Solo\Validator\Tests\Fixtures\BatchRequest;
 use Solo\Validator\Tests\Fixtures\OrderRequest;
 use Solo\Validator\Tests\Fixtures\SignupRequest;
 use Solo\Validator\Tests\Fixtures\TypoRequest;
@@ -16,7 +17,7 @@ use Solo\Validator\Validator;
 
 /**
  * The validator behind solophp/request-handler 4: the same rule-string grammar,
- * conditional presence for absent fields, and error paths of nested items.
+ * presence rules for absent fields, and error paths of nested items.
  */
 final class RequestHandlerCompatibilityTest extends TestCase
 {
@@ -34,6 +35,11 @@ final class RequestHandlerCompatibilityTest extends TestCase
             ['company' => [['rule' => 'required_if', 'params' => ['type', 'company']]]],
             $this->errors(SignupRequest::class, ['email' => 'user@example.com', 'type' => 'company']),
         );
+    }
+
+    public function testAbsentFieldWithPresentIsValidated(): void
+    {
+        $this->assertSame([['rule' => 'present']], $this->errors(BatchRequest::class, [])['ids'] ?? null);
     }
 
     public function testValidRequestIsHydrated(): void
@@ -61,6 +67,13 @@ final class RequestHandlerCompatibilityTest extends TestCase
         $this->expectException(InvalidRuleException::class);
 
         $this->handler()->handleArray(TypoRequest::class, ['name' => 'John']);
+    }
+
+    public function testUnknownRuleOfAnAbsentFieldIsAConfigurationErrorToo(): void
+    {
+        $this->expectException(InvalidRuleException::class);
+
+        $this->handler()->handleArray(TypoRequest::class, []);
     }
 
     private function handler(): RequestHandler
