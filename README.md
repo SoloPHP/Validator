@@ -8,7 +8,7 @@ Lightweight PHP validation library: rule strings compiled once, strict about con
 
 ## Features
 
-- **Built-in Rules** — required, required_if / with / without, email, phone, uuid, date, min, max, in, regex and more
+- **Built-in Rules** — required, required_if / with / without, prohibited_if, present, email, phone, uuid, date, min, max, in, regex and more
 - **Fails Fast** — an unknown rule or a bad parameter throws on first use instead of silently validating nothing
 - **Structured Errors** — at most one machine-readable error per field: the rule name and its parameters
 - **Custom Rules** — callables or classes, registered in the constructor
