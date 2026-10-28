@@ -58,7 +58,7 @@ Validate data against rules.
 
 **Throws:** `InvalidRuleException` — an unknown rule, or parameters a rule cannot use. Raised the first time a rule string is used, whatever the data.
 
-An absent field is checked by presence rules only, and so is a blank value (`null`, `''`, `[]`) of a `nullable` field. The first failing rule ends the field.
+A field with no value — absent, or `null` — is checked by presence rules only, and so is a blank value (`''`, `[]`) of a `nullable` field. The first failing rule ends the field.
 
 **Example:**
 
@@ -131,7 +131,7 @@ interface PresenceRule
 }
 ```
 
-Marks a rule that runs for absent fields and for blank values of `nullable` fields.
+Marks a rule that runs for every field: also for one with no value — absent, or `null` — and for a blank value of a `nullable` field.
 
 ## ParameterizedRule
 

@@ -6,7 +6,7 @@ Rules that read a value as a string — `min`, `max`, `length`, `regex`, `in` �
 
 ## Presence Rules
 
-Presence rules run for every field: also when it is absent, and also when it is blank under `nullable`. Every other rule is skipped in those two cases.
+Presence rules run for every field: also when it has no value — it is absent or `null` — and when it is blank under `nullable`. Every other rule is skipped in those cases.
 
 A value is **filled** unless it is `null`, `''`, `[]` or a string of only whitespace.
 
@@ -95,7 +95,7 @@ $rules = [
 
 ### nullable
 
-Not a rule but a flag: when the value is **blank** — `null`, `''` or `[]` — only presence rules run, so blank input passes.
+Not a rule but a flag: when the value is **blank** — `''` or `[]` — only presence rules run, so blank input passes. `null` needs no flag: it is no value, like a missing field.
 
 ```php
 $rules = [
@@ -203,7 +203,7 @@ The integer, numeric and boolean rules accept exactly what Request-Handler 4 con
 
 ## Size Rules
 
-Sizes count the elements of an array, or the characters (multibyte-aware) of a string, int, float or `Stringable`. `null` has size 0; a bool or another object fails.
+Sizes count the elements of an array, or the characters (multibyte-aware) of a string, int, float or `Stringable`; `''` and `[]` have size 0. A bool or another object fails. A `null` is no value: size rules never see it.
 
 ::: warning Numbers are sized by their characters
 `max:100` accepts 99999999 and `min:1` accepts 0: they count digits. Bound a number's value with [`min_value` / `max_value`](#numeric-value-rules).
@@ -349,7 +349,7 @@ $data = ['tags' => ['php', 'javascript']];
 $data = ['tags' => ['php', 'ruby']];
 ```
 
-Values are compared by their string form, exactly. A bool, `null`, a nested array or an object without `__toString()` never matches.
+Values are compared by their string form, exactly. A bool, a nested array or an object without `__toString()` never matches. A `null` is no value: `in` never sees it — add `required` or `filled` to refuse it.
 
 ---
 
@@ -368,7 +368,7 @@ Values are compared by their string form, exactly. A bool, `null`, a nested arra
 | `required_without_all` | `field,…` | Required when no listed field is filled |
 | `prohibited_if` | `field,value,…` | Must not be filled when another field has one of the values |
 | `prohibited_unless` | `field,value,…` | Must not be filled unless another field has one of the values |
-| `nullable` | — | Blank (`null` / `''` / `[]`) runs presence rules only |
+| `nullable` | — | Blank (`''` / `[]`) runs presence rules only, as `null` always does |
 | `string` | — | Must be a string |
 | `integer` | — | Must be an integer |
 | `numeric` | — | Must be a finite number |

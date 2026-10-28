@@ -1,3 +1,16 @@
+# Upgrading from 4.1 to 4.2
+
+4.2 reads `null` the way 4.0 reads a missing field: a field with no value — absent, or `null` — is checked by presence rules only. A `null` no longer fails `string`, `email`, `min` or any other rule that checks a value. `''`, `[]` and every other value are validated as before.
+
+| Look for | Do |
+|---|---|
+| A field that must not be `null` when sent, validated without a presence rule (`'string'`, `'email'`) | Add `filled`, or `required` when it must also be sent |
+| A rule of your own that should reject `null` | Implement `PresenceRule`, or pair it with `required` / `filled`: other rules no longer see `null` |
+| `nullable` on a field that only had to accept `null` | Nothing: it keeps working, and now matters only for `''` and `[]` |
+| Tests expecting a value rule's error for `null` | Expect no error, or the presence rule's error |
+
+---
+
 # Upgrading from 3.x to 4.0
 
 4.0 makes the validator strict about its configuration and consistent in what it accepts: rule strings are compiled once and checked on first use, `validate()` keeps no state, each field reports one error, and the type rules read values the way [solophp/request-handler](https://github.com/SoloPHP/Request-Handler) 4 casts them.

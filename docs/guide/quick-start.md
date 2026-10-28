@@ -92,15 +92,15 @@ This format is ideal for building error messages on the client side or for i18n/
 
 | The field is… | Rules that run |
 |---|---|
-| absent from the data | presence rules only (`required`, `filled`, `present`, `required_if`, …) |
-| blank (`null`, `''`, `[]`) and the rules contain `nullable` | presence rules only |
+| absent from the data, or `null` | presence rules only (`required`, `filled`, `present`, `required_if`, …) |
+| blank (`''`, `[]`) and the rules contain `nullable` | presence rules only |
 | anything else | every rule, until the first one fails |
 
-So `'email'` alone accepts a missing field; add `required` to demand it. A present `null` without `nullable` is validated like any other value.
+A `null` is no value, like a missing field: `'email'` alone accepts both, `'filled|email'` refuses a sent `null`, and `'required|email'` refuses both. A `''` or `[]` without `nullable` is validated like any other value.
 
 ## Nullable Fields
 
-Use `nullable` to accept blank values:
+`null` needs no flag. Use `nullable` to accept `''` and `[]` too:
 
 ```php
 $rules = [
