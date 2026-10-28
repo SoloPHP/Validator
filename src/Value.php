@@ -13,7 +13,8 @@ namespace Solo\Validator;
 final class Value
 {
     /**
-     * Null, '' or []: what `nullable` lets through.
+     * Null, '' or []: what `nullable` lets through. Null needs no flag: it
+     * is no value.
      */
     public static function isBlank(mixed $value): bool
     {
