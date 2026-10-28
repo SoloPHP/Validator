@@ -62,7 +62,7 @@ final class ValidatorTest extends TestCase
 
     public function testNullableInsideAParameterListIsNotTheFlag(): void
     {
-        $errors = (new Validator())->validate(['status' => null], ['status' => 'in:nullable,active']);
+        $errors = (new Validator())->validate(['status' => ''], ['status' => 'in:nullable,active']);
 
         $this->assertSame(['status' => [['rule' => 'in', 'params' => ['nullable', 'active']]]], $errors);
     }
@@ -190,12 +190,38 @@ final class ValidatorTest extends TestCase
         $this->assertSame(['code' => [['rule' => 'min', 'params' => ['5']]]], $errors);
     }
 
-    public function testPresentBlankValueWithoutNullableIsValidated(): void
+    public function testNullIsNoValueLikeAnAbsentField(): void
+    {
+        $validator = new Validator();
+        $rules = [
+            'email' => 'email|max:5',
+            'name' => 'required|string',
+            'nickname' => 'filled|string',
+            'note' => 'present|string',
+            'company' => 'string|required_if:type,company',
+        ];
+
+        $this->assertSame([], $validator->validate(['email' => null, 'name' => 'Ann', 'note' => null], $rules));
+        $this->assertSame(
+            [
+                'name' => [['rule' => 'required']],
+                'nickname' => [['rule' => 'filled']],
+                'note' => [['rule' => 'present']],
+                'company' => [['rule' => 'required_if', 'params' => ['type', 'company']]],
+            ],
+            $validator->validate(['name' => null, 'nickname' => null, 'type' => 'company', 'company' => null], $rules),
+        );
+    }
+
+    public function testBlankValueWithoutNullableIsValidated(): void
     {
         $validator = new Validator();
 
-        $this->assertSame(['email' => [['rule' => 'email']]], $validator->validate(['email' => null], ['email' => 'email']));
         $this->assertSame(['email' => [['rule' => 'email']]], $validator->validate(['email' => ''], ['email' => 'email']));
+        $this->assertSame(
+            ['tags' => [['rule' => 'min', 'params' => ['1']]]],
+            $validator->validate(['tags' => []], ['tags' => 'array|min:1']),
+        );
     }
 
     public function testFirstFailingRuleEndsTheField(): void

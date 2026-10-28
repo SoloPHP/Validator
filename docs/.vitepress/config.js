@@ -20,7 +20,7 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/installation' },
       { text: 'Rules', link: '/features/rules' },
       { text: 'API', link: '/api/validator' },
-      { text: 'v4.1', link: 'https://github.com/solophp/validator/releases' },
+      { text: 'v4.2', link: 'https://github.com/solophp/validator/releases' },
       {
         text: 'Links',
         items: [

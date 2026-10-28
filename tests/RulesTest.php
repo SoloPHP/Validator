@@ -49,7 +49,7 @@ final class RulesTest extends TestCase
 
         yield 'string: string' => ['string', 'abc', null];
         yield 'string: int' => ['string', 123, ['rule' => 'string']];
-        yield 'string: null' => ['string', null, ['rule' => 'string']];
+        yield 'string: null is no value' => ['string', null, null];
 
         yield 'integer: int' => ['integer', 25, null];
         yield 'integer: numeric string' => ['integer', '-42', null];
@@ -144,6 +144,7 @@ final class RulesTest extends TestCase
         yield 'in: array, one not listed' => ['in:php,js', ['php', 'ruby'], ['rule' => 'in', 'params' => ['php', 'js']]];
         yield 'in: nested array' => ['in:php,js', [['php']], ['rule' => 'in', 'params' => ['php', 'js']]];
         yield 'in: bool' => ['in:1,0', true, ['rule' => 'in', 'params' => ['1', '0']]];
+        yield 'in: null is no value' => ['in:1,0', null, null];
         yield 'in: object' => ['in:a,b', new \stdClass(), ['rule' => 'in', 'params' => ['a', 'b']]];
         yield 'in: stringable' => ['in:abc,def', $stringable, null];
 
@@ -154,9 +155,11 @@ final class RulesTest extends TestCase
         yield 'min: array too small' => ['min:2', ['a'], ['rule' => 'min', 'params' => ['2']]];
         yield 'min: object' => ['min:1', new \stdClass(), ['rule' => 'min', 'params' => ['1']]];
         yield 'min: bool' => ['min:1', true, ['rule' => 'min', 'params' => ['1']]];
-        yield 'min: null has no characters' => ['min:1', null, ['rule' => 'min', 'params' => ['1']]];
+        yield 'min: null is no value' => ['min:1', null, null];
+        yield 'min: empty string has no characters' => ['min:1', '', ['rule' => 'min', 'params' => ['1']]];
         yield 'min: stringable' => ['min:3', $stringable, null];
-        yield 'max: null has no characters' => ['max:3', null, null];
+        yield 'max: null is no value' => ['max:3', null, null];
+        yield 'max: empty string has no characters' => ['max:0', '', null];
         yield 'max: bool' => ['max:3', true, ['rule' => 'max', 'params' => ['3']]];
         yield 'max: object' => ['max:3', new \stdClass(), ['rule' => 'max', 'params' => ['3']]];
         yield 'max: stringable' => ['max:3', $stringable, null];
@@ -170,7 +173,8 @@ final class RulesTest extends TestCase
         yield 'length: array count' => ['length:3', ['a', 'b', 'c'], null];
         yield 'length: stringable' => ['length:3', $stringable, null];
         yield 'length: object' => ['length:3', new \stdClass(), ['rule' => 'length', 'params' => ['3']]];
-        yield 'length: null is zero' => ['length:0', null, null];
+        yield 'length: null is no value' => ['length:3', null, null];
+        yield 'length: empty string is zero' => ['length:0', '', null];
 
         yield 'min_value: above' => ['min_value:18', 25, null];
         yield 'min_value: numeric string' => ['min_value:18', '25', null];

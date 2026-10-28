@@ -51,9 +51,9 @@ final class Validator implements ValidatorInterface
     }
 
     /**
-     * An absent field is checked by presence rules only, and so is a blank
-     * value (null, '', []) of a nullable field. The first failing rule ends
-     * the field, so each field reports at most one error.
+     * A field with no value — absent, or null — is checked by presence rules
+     * only, and so is a blank value ('' or []) of a nullable field. The first
+     * failing rule ends the field, so each field reports at most one error.
      *
      * @return array<string, list<ValidationError>>
      * @throws InvalidRuleException An unknown rule or invalid parameters
@@ -65,7 +65,7 @@ final class Validator implements ValidatorInterface
         foreach ($rules as $name => $ruleString) {
             [$nullable, $chain, $presenceChain] = $this->compiled[$ruleString] ?? $this->compile($ruleString);
             $value = $data[$name] ?? null;
-            if (($value === null && !array_key_exists($name, $data)) || ($nullable && Value::isBlank($value))) {
+            if ($value === null || ($nullable && Value::isBlank($value))) {
                 $chain = $presenceChain;
             }
             if ($chain === []) {

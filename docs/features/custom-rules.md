@@ -192,7 +192,7 @@ A rule implementing `Solo\Validator\ParameterizedRule` gets its parameters once,
 
 ### Presence Rules (PresenceRule)
 
-For an absent field, and for a blank value of a `nullable` field, only presence rules run. A rule opts in by implementing the marker interface `Solo\Validator\PresenceRule`; the built-in `required`, `filled`, `present` and `required_*` rules do. Callables are never presence rules.
+For a field with no value — absent, or `null` — and for a blank value of a `nullable` field, only presence rules run: any other rule never sees `null`. A rule opts in by implementing the marker interface `Solo\Validator\PresenceRule`; the built-in `required`, `filled`, `present` and `required_*` rules do. Callables are never presence rules.
 
 ```php
 use Solo\Validator\Field;
