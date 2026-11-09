@@ -59,7 +59,7 @@ $validator->validate($data, ['email' => 'requird|email']);
 // InvalidRuleException: Unknown validation rule 'requird' in 'requird|email'.
 
 $validator->validate($data, ['name' => 'min:abc']);
-// InvalidRuleException: Invalid rule 'min:abc': expects one non-negative integer.
+// InvalidRuleException: Invalid rule 'min:abc': expects one non-negative integer and an optional unit (bytes).
 ```
 
 A typo never silently disables validation.
