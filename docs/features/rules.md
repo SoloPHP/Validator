@@ -203,7 +203,7 @@ The integer, numeric and boolean rules accept exactly what Request-Handler 4 con
 
 ## Size Rules
 
-Sizes count the elements of an array, or the characters (multibyte-aware) of a string, int, float or `Stringable`; `''` and `[]` have size 0. A bool or another object fails. A `null` is no value: size rules never see it.
+Sizes count the elements of an array, or the characters (multibyte-aware) of a string, int, float or `Stringable`, or its [bytes](#counting-bytes) with the `bytes` unit; `''` and `[]` have size 0. A bool or another object fails. A `null` is no value: size rules never see it.
 
 ::: warning Numbers are sized by their characters
 `max:100` accepts 99999999 and `min:1` accepts 0: they count digits. Bound a number's value with [`min_value` / `max_value`](#numeric-value-rules).
@@ -236,7 +236,37 @@ $rules = [
 ];
 ```
 
-The parameter must be one non-negative integer.
+The size must be one non-negative integer, optionally followed by a unit.
+
+### Counting bytes
+
+Add `bytes` to count the bytes of the value's string form (`strlen()`) instead of its characters:
+
+```php
+$rules = [
+    'password' => 'required|min:8|max:72,bytes',  // bcrypt reads at most 72 bytes
+    'filename' => 'max:255,bytes',                // a filesystem limit
+];
+```
+
+| Value | Characters | Bytes |
+|---|---|---|
+| `'abcd'` | 4 | 4 |
+| `'Ёжик'` | 4 | 8 |
+| `'😀'` | 1 | 4 |
+| `12345` | 5 | 5 |
+
+Use it where a limit is set in bytes: `password_hash()` with bcrypt ignores everything after the 72nd byte — after 36 Cyrillic letters — so `max:72` lets a longer password be cut short silently. Filenames, cookies, push payloads and external APIs limit bytes too.
+
+- A number's string form is ASCII: its bytes are its characters.
+- An array has no bytes: `bytes` on an array fails the rule, as a bool does.
+- `bytes` is the only unit, written in lower case. Any other — `chars`, `BYTES`, `max:72, bytes` with a space — throws `InvalidRuleException`.
+
+The error carries the unit after the size: `['rule' => 'max', 'params' => ['72', 'bytes']]`. `params[0]` is still the size, so a message template that reads it keeps working; check `params[1]` to say "72 bytes" rather than "72 characters".
+
+::: tip bcrypt and NUL
+`password_hash()` also refuses a password with a NUL byte. Rule it out with a pattern: `'required|min:8|max:72,bytes|regex:/^[^\x00]*$/'`.
+:::
 
 ---
 
@@ -374,9 +404,9 @@ Values are compared by their string form, exactly. A bool, a nested array or an 
 | `numeric` | — | Must be a finite number |
 | `boolean` | — | Must be boolean-like |
 | `array` | `keys` (optional) | Must be an array |
-| `min` | `size` | Minimum characters or elements |
-| `max` | `size` | Maximum characters or elements |
-| `length` | `size` | Exact characters or elements |
+| `min` | `size`, `bytes` (optional) | Minimum characters, bytes or elements |
+| `max` | `size`, `bytes` (optional) | Maximum characters, bytes or elements |
+| `length` | `size`, `bytes` (optional) | Exact characters, bytes or elements |
 | `min_value` | `number` | Minimum numeric value |
 | `max_value` | `number` | Maximum numeric value |
 | `email` | — | Must be a valid email |

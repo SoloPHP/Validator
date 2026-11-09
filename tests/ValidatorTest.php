@@ -89,9 +89,16 @@ final class ValidatorTest extends TestCase
      */
     public static function invalidParams(): iterable
     {
-        yield 'min: not a number' => ['min:abc', "Invalid rule 'min:abc': expects one non-negative integer."];
-        yield 'max: missing' => ['max', "Invalid rule 'max': expects one non-negative integer."];
-        yield 'length: negative' => ['length:-1', "Invalid rule 'length:-1': expects one non-negative integer."];
+        $size = 'expects one non-negative integer and an optional unit (bytes).';
+        yield 'min: not a number' => ['min:abc', "Invalid rule 'min:abc': {$size}"];
+        yield 'max: missing' => ['max', "Invalid rule 'max': {$size}"];
+        yield 'length: negative' => ['length:-1', "Invalid rule 'length:-1': {$size}"];
+        yield 'min: unknown unit' => ['min:3,chars', "Invalid rule 'min:3,chars': {$size}"];
+        yield 'max: unit in upper case' => ['max:72,BYTES', "Invalid rule 'max:72,BYTES': {$size}"];
+        yield 'length: space before the unit' => ['length:4, bytes', "Invalid rule 'length:4, bytes': {$size}"];
+        yield 'max: unit without a size' => ['max:bytes', "Invalid rule 'max:bytes': {$size}"];
+        yield 'max: not a number before the unit' => ['max:abc,bytes', "Invalid rule 'max:abc,bytes': {$size}"];
+        yield 'min: two units' => ['min:3,bytes,bytes', "Invalid rule 'min:3,bytes,bytes': {$size}"];
         yield 'min_value: not a number' => ['min_value:x', "Invalid rule 'min_value:x': expects one number."];
         yield 'min_value: infinite' => ['min_value:1e400', "Invalid rule 'min_value:1e400': expects one number."];
         yield 'max_value: two numbers' => ['max_value:1,2', "Invalid rule 'max_value:1,2': expects one number."];
@@ -116,7 +123,7 @@ final class ValidatorTest extends TestCase
     public function testParamErrorNamesTheRuleAsWrittenAndItsRuleString(): void
     {
         $this->expectException(InvalidRuleException::class);
-        $this->expectExceptionMessage("Invalid rule 'size:abc' in 'required|size:abc': expects one non-negative integer.");
+        $this->expectExceptionMessage("Invalid rule 'size:abc' in 'required|size:abc': expects one non-negative integer and an optional unit (bytes).");
 
         (new Validator(['size' => new LengthRule()]))->validate(['code' => 'abc'], ['code' => 'required|size:abc']);
     }

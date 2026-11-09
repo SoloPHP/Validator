@@ -15,13 +15,17 @@ use Solo\Validator\Value;
 final class Params
 {
     /**
+     * A size and an optional unit, as min, max and length take them: `72` or
+     * `72,bytes`.
+     *
      * @param list<string> $params
      * @throws InvalidRuleException
      */
-    public static function expectInteger(array $params): void
+    public static function expectSize(array $params): void
     {
-        if (count($params) !== 1 || !ctype_digit($params[0])) {
-            throw InvalidRuleException::invalidParams('one non-negative integer');
+        $count = count($params);
+        if ($count < 1 || $count > 2 || !ctype_digit($params[0]) || ($count === 2 && $params[1] !== 'bytes')) {
+            throw InvalidRuleException::invalidParams('one non-negative integer and an optional unit (bytes)');
         }
     }
 
