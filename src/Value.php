@@ -82,20 +82,23 @@ final class Value
 
     /**
      * Character count of anything with a string form, element count of an
-     * array, 0 for null. Null for a bool or an object without __toString().
+     * array, 0 for null. In 'bytes', the byte count of the string form, so
+     * an array has none. Null for a bool or an object without __toString().
      */
-    public static function size(mixed $value): ?int
+    public static function size(mixed $value, ?string $unit = null): ?int
     {
-        if (is_string($value)) {
-            return mb_strlen($value);
-        }
-        if (is_array($value)) {
-            return count($value);
-        }
+        $bytes = $unit === 'bytes';
         if ($value === null) {
             return 0;
         }
+        if (is_array($value)) {
+            return $bytes ? null : count($value);
+        }
         $string = self::toString($value);
-        return $string === null ? null : mb_strlen($string);
+        if ($string === null) {
+            return null;
+        }
+
+        return $bytes ? strlen($string) : mb_strlen($string);
     }
 }

@@ -10,18 +10,19 @@ use Solo\Validator\RuleInterface;
 use Solo\Validator\Value;
 
 /**
- * At most N elements of an array, or N characters of a string or number.
+ * At most N elements of an array, or N characters of a string or number;
+ * max:N,bytes - at most N bytes of a string or number.
  */
 final class MaxRule implements RuleInterface, ParameterizedRule
 {
     public function checkParams(array $params): void
     {
-        Params::expectInteger($params);
+        Params::expectSize($params);
     }
 
     public function validate(mixed $value, array $params, Field $field): ?array
     {
-        $size = Value::size($value);
+        $size = Value::size($value, $params[1] ?? null);
 
         return $size !== null && $size <= (int)$params[0] ? null : ['rule' => 'max', 'params' => $params];
     }
